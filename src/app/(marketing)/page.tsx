@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getUser } from "@/lib/supabase/server";
 
 const FEATURES = [
   ["🎮", "Your whole library", "Sign in with Steam and every game you own appears instantly — with playtime. Add console games by hand."],
@@ -7,7 +8,8 @@ const FEATURES = [
   ["👥", "Game with friends", "Add friends, see their clips and compare achievements. Your profile stays private until you say so."],
 ];
 
-export default function Home() {
+export default async function Home() {
+  const { user } = await getUser();
   return (
     <>
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-12 text-center sm:pt-24">
@@ -19,7 +21,8 @@ export default function Home() {
           Bring your Steam library, every achievement and your best clips together — and show them off to your friends.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/signup" className="btn-primary px-6 py-3 text-base">Get started — it&apos;s free</Link>
+          {user ? <Link href="/dashboard" className="btn-primary px-6 py-3 text-base">Welcome back — enter LoreVault →</Link>
+            : <Link href="/signup" className="btn-primary px-6 py-3 text-base">Get started — it&apos;s free</Link>}
           <Link href="/features" className="btn-ghost px-6 py-3 text-base">See features</Link>
         </div>
       </section>
@@ -39,7 +42,7 @@ export default function Home() {
             <li><span className="text-cyan">2.</span> Sign in with Steam</li>
             <li><span className="text-cyan">3.</span> Explore your trophy room</li>
           </ol>
-          <Link href="/signup" className="btn-primary mt-6">Create my account</Link>
+          <Link href={user ? "/dashboard" : "/signup"} className="btn-primary mt-6">{user ? "Go to my dashboard" : "Create my account"}</Link>
         </div>
       </section>
     </>
