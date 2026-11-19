@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { adminClient, getUser } from "@/lib/supabase/server";
-import { capacityOf, checkUpload, sanitizeFilename } from "@/lib/storage/quota";
-import { signedUploadUrl } from "@/lib/storage/r2";
+import { capacityOf, checkUpload, sanitizeFilename, SUPABASE_MAX_FILE_BYTES } from "@/lib/storage/quota";
+import { provider, signedUploadUrl } from "@/lib/storage";
 import { rateLimit } from "@/lib/security/rate-limit";
 
 const Body = z.object({
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
     filename, contentType, sizeBytes: size, usedBytes: Number(usage.used_bytes),
     pendingBytes: (pending ?? []).reduce((t, p) => t + Number(p.size_bytes), 0),
     capacityBytes: capacityOf(quota), overQuotaGrace: !!quota.grace_until,
+    maxFileBytes: provider === "supabase" ? SUPABASE_MAX_FILE_BYTES : undefined,
   });
   if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
 
@@ -48,5 +49,5 @@ export async function POST(req: Request) {
   }).select("id").single();
   if (error) return NextResponse.json({ error: "Could not start upload." }, { status: 500 });
 
-  return NextResponse.json({ id: file.id, url: await signedUploadUrl(objectKey, contentType, size) });
+  return NextResponse.json({ id: file.id, mode: provider, url: await signedUploadUrl(objectKey, contentType, size) });
 }

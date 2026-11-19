@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminClient, getUser } from "@/lib/supabase/server";
-import { deleteObject, headObject } from "@/lib/storage/r2";
+import { deleteObject, headObject } from "@/lib/storage";
 
 export async function POST(req: Request) {
   const { user } = await getUser();

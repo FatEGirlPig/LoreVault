@@ -1,6 +1,8 @@
 import { GB } from "@/lib/plans";
 
 export const MAX_FILE_BYTES = 2 * GB;
+/** Supabase free plan caps each uploaded file at 50 MB. */
+export const SUPABASE_MAX_FILE_BYTES = 50 * 1024 * 1024;
 
 export const ALLOWED_TYPES: Record<string, { category: "screenshot" | "video" | "note" | "document" | "other"; ext: string[] }> = {
   "image/png": { category: "screenshot", ext: ["png"] },
@@ -21,11 +23,12 @@ export type UploadCheck =
 /** Pure server-side validation of an upload request against type rules and remaining quota. */
 export function checkUpload(input: {
   filename: string; contentType: string; sizeBytes: number;
-  usedBytes: number; pendingBytes: number; capacityBytes: number; overQuotaGrace: boolean;
+  usedBytes: number; pendingBytes: number; capacityBytes: number; overQuotaGrace: boolean; maxFileBytes?: number;
 }): UploadCheck {
   const { filename, contentType, sizeBytes, usedBytes, pendingBytes, capacityBytes } = input;
   if (!Number.isSafeInteger(sizeBytes) || sizeBytes <= 0) return { ok: false, error: "Invalid file size." };
-  if (sizeBytes > MAX_FILE_BYTES) return { ok: false, error: "File exceeds the 2 GB per-file limit." };
+  const max = input.maxFileBytes ?? MAX_FILE_BYTES;
+  if (sizeBytes > max) return { ok: false, error: `File is too large. The limit is ${max >= GB ? `${max / GB} GB` : `${Math.round(max / 1048576)} MB`} per file.` };
   const rule = ALLOWED_TYPES[contentType];
   if (!rule) return { ok: false, error: "This file type is not supported." };
   const ext = filename.toLowerCase().split(".").pop() ?? "";

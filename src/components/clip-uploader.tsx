@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { putFile } from "@/lib/upload-client";
 
 export function ClipUploader({ games }: { games: { id: string; title: string }[] }) {
   const [file, setFile] = useState<File | null>(null);
@@ -18,12 +19,7 @@ export function ClipUploader({ games }: { games: { id: string; title: string }[]
       title: f.get("title"), visibility: f.get("visibility"), gameId: f.get("gameId") || undefined, folder: "Clips" }) });
     const j = await r.json();
     if (!r.ok) { setProgress(null); return setStatus({ error: j.error }); }
-    const ok = await new Promise<boolean>((resolve) => {
-      const x = new XMLHttpRequest();
-      x.open("PUT", j.url); x.setRequestHeader("Content-Type", file.type);
-      x.upload.onprogress = (ev) => ev.lengthComputable && setProgress(Math.round((ev.loaded / ev.total) * 100));
-      x.onload = () => resolve(x.status < 300); x.onerror = () => resolve(false); x.send(file);
-    });
+    const ok = await putFile(j.url, j.mode, file, (p) => setProgress(p));
     if (!ok) { setProgress(null); return setStatus({ error: "Upload failed. Check your connection and try again." }); }
     const c = await fetch("/api/vault/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: j.id }) });
     setProgress(null);
@@ -37,7 +33,7 @@ export function ClipUploader({ games }: { games: { id: string; title: string }[]
       <h2 className="font-display font-bold sm:col-span-2">Share a clip</h2>
       <label className="sm:col-span-2 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-line p-6 text-center hover:border-cyan">
         <span className="font-semibold">{file ? file.name : "Choose a gameplay clip"}</span>
-        <span className="text-xs text-mute">MP4 or WebM · up to 2 GB · counts toward your storage</span>
+        <span className="text-xs text-mute">MP4 or WebM · up to 50 MB · counts toward your storage</span>
         <input type="file" accept="video/mp4,video/webm" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       </label>
       <input name="title" maxLength={100} placeholder="Title (e.g. Clutch 1v4)" className="input sm:col-span-2" aria-label="Title" />

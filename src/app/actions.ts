@@ -6,7 +6,7 @@ import { z } from "zod";
 import { adminClient, audit, createClient, requireUser } from "@/lib/supabase/server";
 import { syncAccount } from "@/lib/integrations/sync";
 import { getAchievements } from "@/lib/integrations/achievements";
-import { deleteObject } from "@/lib/storage/r2";
+import { deleteObject } from "@/lib/storage";
 import { capacityOf } from "@/lib/storage/quota";
 import { addonPrice, planPrice, stripe } from "@/lib/billing/stripe";
 import { rateLimit } from "@/lib/security/rate-limit";
