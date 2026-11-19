@@ -3,7 +3,7 @@ import { deleteAccount, updateCustomization, updatePassword, updatePrivacy, upda
 import { loadStats } from "@/lib/stats";
 import { ActionForm, Submit } from "@/components/forms";
 import { Notice, VisibilitySelect } from "@/components/ui";
-import { SoundSettings } from "@/components/sound";
+import { PerformanceSettings, SoundSettings } from "@/components/sound";
 export const metadata = { title: "Settings" };
 
 const PRIVACY: [string, string][] = [
@@ -76,6 +76,8 @@ export default async function Settings({ searchParams }: { searchParams: Promise
       </section>
 
       <section id="sound" className="card"><h2 className="mb-4 font-display font-bold">Sound</h2><SoundSettings /></section>
+
+      <section id="performance" className="card"><h2 className="mb-4 font-display font-bold">Performance</h2><PerformanceSettings /></section>
 
       <section id="password" className="card"><h2 className="mb-4 font-display font-bold">Password</h2>
         <ActionForm action={updatePassword} className="flex flex-wrap gap-3">

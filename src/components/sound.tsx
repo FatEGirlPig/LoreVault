@@ -43,8 +43,17 @@ class Engine {
     this.sfx.gain.setTargetAtTime(p.sfx * 0.6, t, 0.02);
   }
 
+  private idle = 0;
+  /** Suspend the audio engine when quiet so it uses no CPU between sounds. */
+  private keepAlive() {
+    if (this.ctx.state === "suspended") this.ctx.resume();
+    clearTimeout(this.idle);
+    this.idle = window.setTimeout(() => this.ctx.suspend(), 3000);
+  }
+
   /** Short two-tone "confirm" blip. */
   click() {
+    this.keepAlive();
     const t = this.ctx.currentTime;
     for (const [f0, f1, delay, type] of [[1200, 1800, 0, "sine"], [600, 300, 0.01, "triangle"]] as const) {
       const o = this.ctx.createOscillator(), g = this.ctx.createGain();
@@ -60,6 +69,7 @@ class Engine {
     const now = performance.now();
     if (now - this.lastHover < 60) return;
     this.lastHover = now;
+    this.keepAlive();
     const t = this.ctx.currentTime, o = this.ctx.createOscillator(), g = this.ctx.createGain();
     o.type = "sine"; o.frequency.value = 2400;
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
@@ -135,5 +145,22 @@ export function SoundSettings() {
       </label>
       <p className="text-xs text-mute sm:col-span-2">Saved on this device. You can also use the speaker button in the bottom-right corner of any page.</p>
     </div>
+  );
+}
+
+/** Performance toggle: Lite mode turns off the aurora, motion and glass effects. Auto-on for low-power devices. */
+export function PerformanceSettings() {
+  const [lite, setLite] = useState<boolean | null>(null);
+  useEffect(() => setLite(document.documentElement.hasAttribute("data-lite")), []);
+  if (lite === null) return null;
+  return (
+    <label className="flex items-start gap-3 text-sm">
+      <input type="checkbox" checked={lite} className="mt-1" onChange={(e) => {
+        const on = e.target.checked; setLite(on);
+        try { localStorage.setItem("vh-lite", on ? "1" : "0"); } catch {}
+        if (on) document.documentElement.dataset.lite = ""; else delete document.documentElement.dataset.lite;
+      }} />
+      <span><b>Lite mode</b><span className="block text-xs text-mute">Turns off the animated background, glass effects and transitions for maximum smoothness and battery life. Switched on automatically on lower-powered devices.</span></span>
+    </label>
   );
 }

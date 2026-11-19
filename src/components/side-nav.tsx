@@ -17,7 +17,7 @@ export function SideNav({ unread = 0, guest = false }: { unread?: number; guest?
       {NAV.filter(([href]) => !guest || GUEST.has(href)).map(([href, label]) => {
         const active = path === href || path.startsWith(href + "/");
         return (
-          <Link key={href} href={href} prefetch aria-current={active ? "page" : undefined}
+          <Link key={href} href={href} aria-current={active ? "page" : undefined}
             className={`relative flex items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors duration-200 ${active ? "bg-panel text-ink" : "text-mute hover:bg-panel/60 hover:text-ink"}`}>
             {active && <span className="absolute inset-y-1.5 left-0 hidden w-0.5 rounded-full bg-gradient-to-b from-violet to-cyan md:block" />}
             {label}
