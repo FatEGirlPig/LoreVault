@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
 import { refreshAchievements, removeUserGame, toggleCollectionGame, updateUserGame } from "@/app/actions";
 import { getAchievements } from "@/lib/integrations/achievements";
+import { getStoreInfo } from "@/lib/integrations/store";
 import { Achievements } from "@/components/achievements";
 import { ActionForm, ConfirmButton, Submit } from "@/components/forms";
 import { PLATFORM_LABEL, SOURCE_LABEL } from "@/components/ui";
@@ -17,11 +18,27 @@ export default async function GameDetail({ params }: { params: Promise<{ id: str
     supabase.from("collections").select("id, name, collection_games(game_id)").eq("user_id", user.id).order("position"),
   ]);
   const synced = ug.source !== "manual";
-  const ach = ug.platform === "steam" && ug.connected_account_id ? await getAchievements(user.id, ug.id) : null;
+  const [ach, store] = await Promise.all([
+    ug.platform === "steam" && ug.connected_account_id ? getAchievements(user.id, ug.id) : null,
+    getStoreInfo(game.id),
+  ]);
 
   return (
     <div className="space-y-6">
-      {game.cover_url && <img src={game.cover_url} alt="" className="max-h-56 w-full rounded-2xl object-cover" />}
+      <div className="relative overflow-hidden rounded-2xl border border-line">
+        {store?.background_url && <img src={store.background_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-30" />}
+        <div className="relative flex flex-col gap-5 p-5 sm:flex-row">
+          {game.cover_url && <img src={game.cover_url} alt="" className="w-full rounded-xl shadow-lg sm:w-80" />}
+          <div className="min-w-0 space-y-2">
+            {store?.description && <p className="text-sm">{store.description}</p>}
+            {!!store?.genres?.length && <div className="flex flex-wrap gap-1">{store.genres.map((g) => <span key={g} className="badge bg-void/60">{g}</span>)}</div>}
+            <p className="text-xs text-mute">{[store?.developer, store?.release_date].filter(Boolean).join(" · ")}</p>
+            {game.external_id && ug.platform === "steam" && <a href={`https://store.steampowered.com/app/${game.external_id}`} target="_blank" rel="noopener noreferrer" className="inline-block text-xs text-cyan hover:underline">View on Steam ↗</a>}
+          </div>
+        </div>
+      </div>
+      {!!store?.screenshots?.length && <div className="flex gap-2 overflow-x-auto pb-1">{store.screenshots.map((s) => (
+        <img key={s} src={s} alt="" className="h-28 shrink-0 rounded-lg border border-line" loading="lazy" />))}</div>}
       <div><h1 className="h1">{game.title}</h1>
         <div className="mt-2 flex flex-wrap gap-2">{(sources ?? []).map((s, i) => (
           <span key={i} className="badge">{PLATFORM_LABEL[s.platform] ?? s.platform} · {SOURCE_LABEL[s.source]}

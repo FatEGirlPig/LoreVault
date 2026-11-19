@@ -3,6 +3,15 @@ import { getUser } from "@/lib/supabase/server";
 import { PLATFORM_LABEL } from "@/components/ui";
 import { ClipCard } from "@/components/clip-card";
 import { listClips } from "@/lib/clips";
+import { loadStats } from "@/lib/stats";
+import { Badges } from "@/components/badges";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+  const { username } = await params;
+  const card = `/api/card/${encodeURIComponent(username.toLowerCase())}`;
+  return { title: `@${username}`, openGraph: { images: [card] }, twitter: { card: "summary_large_image", images: [card] } };
+}
 
 // All reads go through RLS: anything the viewer may not see simply isn't returned.
 export default async function Profile({ params }: { params: Promise<{ username: string }> }) {
@@ -17,6 +26,7 @@ export default async function Profile({ params }: { params: Promise<{ username: 
     listClips(supabase, user?.id ?? "", "public", profile.id),
     supabase.from("user_achievements").select("unlocked, total").eq("user_id", profile.id).gt("total", 0),
   ]);
+  const { badges } = await loadStats(supabase, profile.id);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -29,6 +39,7 @@ export default async function Profile({ params }: { params: Promise<{ username: 
           <span className="badge">{ach.filter((a) => a.unlocked === a.total).length} perfect games</span></div>}
         {user?.id === profile.id && <p className="mt-3 text-xs text-mute">You&apos;re viewing your own profile. Others only see what your privacy settings allow.</p>}
       </div>
+      {badges.some((b) => b.earned) && <section className="mt-8"><h2 className="mb-3 font-display font-bold">Badges</h2><Badges badges={badges} earnedOnly /></section>}
       {!!collections?.length && <section className="mt-8">
         <h2 className="font-display font-bold">Collections</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">{collections.map((c) => (

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  ["/dashboard", "Dashboard"], ["/library", "Library"], ["/achievements", "Achievements"], ["/clips", "Clips"],
+  ["/dashboard", "Dashboard"], ["/library", "Library"], ["/achievements", "Achievements"], ["/leaderboard", "Leaderboard"], ["/clips", "Clips"],
   ["/collections", "Collections"], ["/friends", "Friends"], ["/connections", "Steam"], ["/settings", "Settings"],
 ];
 

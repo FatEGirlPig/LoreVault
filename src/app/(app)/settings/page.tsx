@@ -29,6 +29,13 @@ export default async function Settings() {
           <div className="flex items-end"><Submit>Save profile</Submit></div>
         </ActionForm>
         {profile?.username && profile.visibility !== "private" && <p className="mt-3 text-xs text-mute">Your profile: /profile/{profile.username}</p>}
+        {profile?.username && (profile.visibility === "public" && privacy?.library === "public"
+          ? <div className="mt-4 space-y-2"><p className="label">Your shareable stats card</p>
+              <img src={`/api/card/${profile.username}`} alt="Your LoreVault stats card" className="w-full max-w-lg rounded-xl border border-line" loading="lazy" />
+              <div className="flex gap-2"><a href={`/api/card/${profile.username}`} download={`lorevault-${profile.username}.png`} className="btn-ghost">Download card</a>
+                <a href={`/profile/${profile.username}`} className="btn-ghost">View profile</a></div>
+              <p className="text-xs text-mute">Paste your profile link in Discord or X and this card shows up automatically.</p></div>
+          : <p className="mt-3 text-xs text-mute">Set your profile and library to Public to get a shareable stats card.</p>)}
       </section>
 
       <section className="card"><h2 className="mb-1 font-display font-bold">Privacy</h2>

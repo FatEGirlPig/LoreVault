@@ -9,7 +9,7 @@ export async function getAchievements(userId: string, userGameId: string, opts: 
   Promise<{ items: Achievement[]; unlocked: number; total: number; fetchedAt: string | null; error?: string }> {
   const db = adminClient();
   const { data: ug } = await db.from("user_games")
-    .select("id, platform, connected_account_id, games(external_id), connected_accounts(external_user_id)")
+    .select("id, platform, connected_account_id, games(external_id, title), connected_accounts(external_user_id)")
     .eq("id", userGameId).eq("user_id", userId).single();
   const appId = (ug?.games as unknown as { external_id: string | null } | null)?.external_id;
   const steamId = (ug?.connected_accounts as unknown as { external_user_id: string } | null)?.external_user_id;
@@ -22,6 +22,7 @@ export async function getAchievements(userId: string, userGameId: string, opts: 
     const unlocked = items.filter((a) => a.unlocked).length;
     const row = { user_game_id: userGameId, user_id: userId, items, unlocked, total: items.length, fetched_at: new Date().toISOString() };
     await db.from("user_achievements").upsert(row);
+    await recordActivity(userId, userGameId, (ug.games as unknown as { title: string }).title, (cached?.items ?? []) as Achievement[], items, !!cached);
     return { items, unlocked, total: items.length, fetchedAt: row.fetched_at };
   } catch (e) {
     return { ...fromCache(), error: e instanceof Error ? e.message : "Could not load achievements." };
@@ -45,4 +46,25 @@ export async function prefetchAchievements(userId: string, opts: { limit?: numbe
     await Promise.all(todo.slice(i, i + 5).map((r) => getAchievements(userId, r.id, { force: true }).then(() => done++)));
   }
   return done;
+}
+
+const RECENT_MS = 14 * 864e5;
+
+/** Turn newly unlocked achievements (and newly perfect games) into feed events. Old unlocks never flood the feed. */
+async function recordActivity(userId: string, ugId: string, game: string, before: Achievement[], after: Achievement[], hadCache: boolean) {
+  const was = new Set(before.filter((a) => a.unlocked).map((a) => a.id));
+  const fresh = after.filter((a) => a.unlocked && !was.has(a.id) && a.unlockedAt && Date.now() - a.unlockedAt * 1000 < RECENT_MS);
+  const events = fresh.slice(0, 15).map((a) => ({
+    user_id: userId, kind: "achievement", visibility: "public", dedup_key: `ach:${ugId}:${a.id}`,
+    created_at: new Date(a.unlockedAt! * 1000).toISOString(),
+    payload: { game, ugId, name: a.name, icon: a.icon, percent: a.globalPercent },
+  }));
+  const perfectNow = after.length > 0 && after.every((a) => a.unlocked);
+  const perfectBefore = hadCache && before.length > 0 && before.every((a) => a.unlocked);
+  if (perfectNow && !perfectBefore && fresh.length) {
+    const last = Math.max(...after.map((a) => a.unlockedAt ?? 0));
+    events.push({ user_id: userId, kind: "perfect", visibility: "public", dedup_key: `perfect:${ugId}`,
+      created_at: new Date(last * 1000).toISOString(), payload: { game, ugId, name: "", icon: "", percent: null } });
+  }
+  if (events.length) await adminClient().from("activity_events").upsert(events, { onConflict: "user_id,dedup_key", ignoreDuplicates: true });
 }

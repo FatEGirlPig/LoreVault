@@ -4,34 +4,37 @@ import { refreshAllAchievements } from "@/app/actions";
 import { Submit } from "@/components/forms";
 import { Empty, Notice } from "@/components/ui";
 import type { Achievement } from "@/lib/integrations/steam";
+import { loadStats } from "@/lib/stats";
+import { Badges } from "@/components/badges";
 export const metadata = { title: "Achievements" };
 
-type Row = { user_game_id: string; unlocked: number; total: number; items: Achievement[]; user_games: { games: { title: string; cover_url: string | null } } };
 
 export default async function Achievements({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams;
   const { supabase, user } = await requireUser();
-  const [{ data }, { count: steam }] = await Promise.all([
-    supabase.from("user_achievements").select("user_game_id, unlocked, total, items, user_games(games(title, cover_url))")
-      .eq("user_id", user.id).gt("total", 0),
+  const [{ rows, unlocks: all, badges }, { count: steam }] = await Promise.all([
+    loadStats(supabase, user.id),
     supabase.from("connected_accounts").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("platform", "steam"),
   ]);
-  const rows = (data ?? []) as unknown as Row[];
 
   const totalUnlocked = rows.reduce((t, r) => t + r.unlocked, 0);
   const totalAll = rows.reduce((t, r) => t + r.total, 0);
   const perfect = rows.filter((r) => r.unlocked === r.total);
   const started = rows.filter((r) => r.unlocked > 0);
   const avg = started.length ? Math.round(started.reduce((t, r) => t + r.unlocked / r.total, 0) / started.length * 100) : 0;
-  const all = rows.flatMap((r) => r.items.filter((a) => a.unlocked).map((a) => ({ ...a, game: r.user_games.games.title, ugId: r.user_game_id })));
   const recent = [...all].sort((a, b) => (b.unlockedAt ?? 0) - (a.unlockedAt ?? 0)).slice(0, 12);
   const rarest = all.filter((a) => a.globalPercent != null).sort((a, b) => a.globalPercent! - b.globalPercent!).slice(0, 8);
+  // Quick wins: locked, not hidden, unlocked by the most players, in games you've started.
+  const quickWins = started.flatMap((r) => r.items.filter((a) => !a.unlocked && !a.hidden && a.globalPercent != null)
+    .map((a) => ({ ...a, game: r.user_games.games.title, ugId: r.user_game_id })))
+    .sort((a, b) => b.globalPercent! - a.globalPercent!).slice(0, 8);
   const games = [...started].sort((a, b) => b.unlocked / b.total - a.unlocked / a.total);
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="h1">Trophy Room</h1>
+        <Link href="/wrapped" className="btn-ghost">🎁 Year in review</Link>
         {!!steam && <form action={refreshAllAchievements}><Submit className="btn-ghost">Refresh from Steam</Submit></form>}
       </div>
       <Notice params={sp} />
@@ -47,6 +50,16 @@ export default async function Achievements({ searchParams }: { searchParams: Pro
           <Stat label="Avg. completion" value={`${avg}%`} sub={`across ${started.length} games`} />
           <Stat label="Rarest unlock" value={rarest[0] ? `${rarest[0].globalPercent}%` : "—"} sub={rarest[0]?.name ?? ""} />
         </div>
+
+        <section>
+          <h2 className="mb-3 font-display font-bold">Badges <span className="text-sm font-normal text-mute">· {badges.filter((b) => b.earned).length}/{badges.length} earned</span></h2>
+          <Badges badges={badges} />
+        </section>
+
+        {!!quickWins.length && <section>
+          <h2 className="mb-3 font-display font-bold">Quick wins <span className="text-sm font-normal text-mute">· the easiest achievements you haven&apos;t unlocked yet</span></h2>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{quickWins.map((a) => <AchItem key={a.ugId + a.id} a={{ ...a, icon: a.iconGray || a.icon }} />)}</ul>
+        </section>}
 
         {!!recent.length && <section>
           <h2 className="mb-3 font-display font-bold">Recent unlocks</h2>

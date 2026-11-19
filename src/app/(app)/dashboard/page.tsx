@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
 import { Empty, PLATFORM_LABEL } from "@/components/ui";
+import { autoSyncIfStale } from "@/lib/auto-sync";
+import { adminClient } from "@/lib/supabase/server";
 export const metadata = { title: "Dashboard" };
 
 export default async function Dashboard() {
@@ -10,9 +12,16 @@ export default async function Dashboard() {
     supabase.from("user_games").select("*", { count: "exact", head: true }).eq("user_id", user.id),
     supabase.from("user_games").select("id, platform, playtime_minutes, games(title, cover_url)").eq("user_id", user.id)
       .order("playtime_minutes", { ascending: false, nullsFirst: false }).limit(6),
-    supabase.from("connected_accounts").select("platform, status, last_synced_at").eq("user_id", user.id),
+    supabase.from("connected_accounts").select("id, platform, status, last_synced_at").eq("user_id", user.id),
     supabase.from("user_achievements").select("unlocked, total").eq("user_id", user.id).gt("total", 0),
   ]);
+  autoSyncIfStale(user.id, accounts);
+  // Feed: RLS returns your own events plus friends' events they chose to share.
+  const { data: events } = await supabase.from("activity_events").select("id, user_id, kind, payload, created_at")
+    .order("created_at", { ascending: false }).limit(25);
+  const ids = [...new Set((events ?? []).map((e) => e.user_id))];
+  const { data: names } = ids.length ? await adminClient().from("profiles").select("id, username").in("id", ids) : { data: [] };
+  const who = (id: string) => id === user.id ? "You" : names?.find((n) => n.id === id)?.username ?? "A friend";
   const unlocked = (ach ?? []).reduce((t, a) => t + a.unlocked, 0);
   const perfect = (ach ?? []).filter((a) => a.unlocked === a.total).length;
   const hours = (recent ?? []).reduce((t, g) => t + (g.playtime_minutes ?? 0), 0);
@@ -49,6 +58,24 @@ export default async function Dashboard() {
               <span className="shrink-0 text-mute">{g.playtime_minutes ? `${Math.round(g.playtime_minutes / 60)}h` : PLATFORM_LABEL[g.platform]}</span></div>
           </Link></li>;
         })}</ul> : <Empty title="No games yet"><Link href="/connections" className="text-cyan">Connect Steam</Link> or <Link href="/library" className="text-cyan">add a game</Link>.</Empty>}
+      </section>
+      <section>
+        <h2 className="mb-3 font-display font-bold">Activity</h2>
+        {events?.length ? <ul className="card divide-y divide-line p-0">{events.map((e) => {
+          const p = e.payload as { game: string; ugId: string; name: string; icon: string; percent: number | null };
+          const mine = e.user_id === user.id;
+          return <li key={e.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+            {e.kind === "perfect" ? <span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl">🏆</span>
+              : p.icon ? <img src={p.icon} alt="" className="h-10 w-10 shrink-0 rounded-lg" loading="lazy" /> : <span className="h-10 w-10 shrink-0 rounded-lg bg-navy" />}
+            <p className="min-w-0 flex-1">
+              <span className="font-semibold">{mine ? "You" : <Link href={`/profile/${who(e.user_id)}`} className="hover:text-cyan">{who(e.user_id)}</Link>}</span>
+              {e.kind === "perfect" ? <> completed <b>{p.game}</b> 100%!</>
+                : <> unlocked <b>{p.name}</b> in {mine ? <Link href={`/library/${p.ugId}`} className="hover:text-cyan">{p.game}</Link> : p.game}
+                  {p.percent != null && p.percent < 10 && <span className="text-violet"> · {p.percent}% rare</span>}</>}
+            </p>
+            <time className="shrink-0 text-xs text-mute">{new Date(e.created_at).toLocaleDateString()}</time>
+          </li>;
+        })}</ul> : <Empty title="No activity yet">New achievements you and your friends unlock show up here. Friends need Settings → Privacy → Activity set to Friends.</Empty>}
       </section>
       {accounts?.map((a) => (
         <p key={a.platform} className={`text-xs ${a.status === "error" ? "text-red-300" : "text-mute"}`}>
