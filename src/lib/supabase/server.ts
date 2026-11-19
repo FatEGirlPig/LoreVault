@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 export async function createClient() {
   const store = await cookies();
@@ -21,11 +22,12 @@ export function adminClient() {
   });
 }
 
-export async function getUser() {
+/** Cached per request: the layout and page share a single auth lookup. */
+export const getUser = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   return { supabase, user: data.user };
-}
+});
 
 export async function requireUser() {
   const { supabase, user } = await getUser();

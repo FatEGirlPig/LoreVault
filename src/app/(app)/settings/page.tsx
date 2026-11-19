@@ -6,7 +6,7 @@ import { SoundSettings } from "@/components/sound";
 export const metadata = { title: "Settings" };
 
 const PRIVACY: [string, string][] = [
-  ["library", "Gaming library"], ["connected_accounts", "Connected accounts"], ["media_default", "New Vault files (default)"],
+  ["library", "Gaming library"], ["connected_accounts", "Connected accounts"], ["media_default", "New clips (default)"],
   ["notes", "Game notes"], ["collections_default", "New collections (default)"], ["friends_list", "Friends list"], ["activity", "Activity"],
 ];
 
@@ -50,7 +50,7 @@ export default async function Settings() {
         <a href="/api/account/export" className="btn-ghost">Export data (JSON)</a></section>
 
       <section className="card border-red-500/40"><h2 className="mb-2 font-display font-bold text-red-300">Delete account</h2>
-        <p className="mb-3 text-sm text-mute">Permanently deletes your account, library, Vault files and cancels any subscription. This cannot be undone.</p>
+        <p className="mb-3 text-sm text-mute">Permanently deletes your account, library, achievements and clips. This cannot be undone.</p>
         <ActionForm action={deleteAccount} className="flex flex-wrap gap-3">
           <input name="confirm" placeholder='Type "DELETE"' className="input max-w-xs" aria-label="Confirm deletion" />
           <Submit className="btn-danger">Delete my account</Submit></ActionForm></section>

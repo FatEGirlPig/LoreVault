@@ -28,3 +28,11 @@ body { background: radial-gradient(1200px 600px at 80% -10%, #1b1450 0%, transpa
 @utility glow-text { @apply bg-gradient-to-r from-violet to-cyan bg-clip-text text-transparent; }
 @media (prefers-reduced-motion: no-preference) { .fade-in { animation: fade .4s ease-out both; } }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Page transitions & loading skeletons */
+@media (prefers-reduced-motion: no-preference) {
+  .page-enter { animation: page-in .28s cubic-bezier(.2,.7,.2,1) both; }
+}
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.skeleton { border-radius: 1rem; background: linear-gradient(90deg, var(--color-panel) 25%, #18203f 50%, var(--color-panel) 75%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }

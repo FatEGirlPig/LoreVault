@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED = ["/dashboard", "/library", "/connections", "/vault", "/clips", "/collections", "/friends", "/settings", "/billing"];
+const PROTECTED = ["/dashboard", "/library", "/connections", "/clips", "/achievements", "/collections", "/friends", "/settings"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -15,7 +15,8 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims(); // refreshes the session cookie if needed
+  const user = data?.claims?.sub;
   const path = request.nextUrl.pathname;
   if (!user && PROTECTED.some((p) => path === p || path.startsWith(p + "/"))) {
     const url = request.nextUrl.clone();

@@ -12,10 +12,9 @@ export default async function GameDetail({ params }: { params: Promise<{ id: str
   const { data: ug } = await supabase.from("user_games").select("*, games(*)").eq("id", id).eq("user_id", user.id).single();
   if (!ug) notFound();
   const game = ug.games as { id: string; title: string; cover_url: string | null; external_id: string | null };
-  const [{ data: sources }, { data: collections }, { data: media }] = await Promise.all([
+  const [{ data: sources }, { data: collections }] = await Promise.all([
     supabase.from("user_games").select("platform, source, last_synced_at, games!inner(title)").eq("user_id", user.id).eq("games.title", game.title),
     supabase.from("collections").select("id, name, collection_games(game_id)").eq("user_id", user.id).order("position"),
-    supabase.from("media_files").select("id, filename").eq("owner_id", user.id).eq("game_id", game.id),
   ]);
   const synced = ug.source !== "manual";
   const ach = ug.platform === "steam" && ug.connected_account_id ? await getAchievements(user.id, ug.id) : null;
@@ -67,8 +66,6 @@ export default async function GameDetail({ params }: { params: Promise<{ id: str
                 <input type="hidden" name="user_game_id" value={ug.id} /><input type="hidden" name="action" value={inIt ? "remove" : "add"} />
                 <span>{c.name}</span><button className={inIt ? "text-cyan" : "text-mute hover:text-ink"}>{inIt ? "✓ Added" : "+ Add"}</button></form></li>;
             })}</ul> : <p className="text-sm text-mute">No collections yet.</p>}</div>
-          {!!media?.length && <div className="card"><h2 className="mb-2 font-display font-bold">Vault files</h2>
-            <ul className="text-sm">{media.map((m) => <li key={m.id}><a href={`/api/vault/${m.id}/download`} className="hover:text-cyan">{m.filename}</a></li>)}</ul></div>}
           {!synced && <form action={removeUserGame}><input type="hidden" name="id" value={ug.id} />
             <ConfirmButton message="Remove this game from your library?">Remove from library</ConfirmButton></form>}
         </div>

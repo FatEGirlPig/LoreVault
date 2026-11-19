@@ -2,15 +2,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { z } from "zod";
 import { adminClient, audit, createClient, requireUser } from "@/lib/supabase/server";
 import { syncAccount } from "@/lib/integrations/sync";
-import { getAchievements } from "@/lib/integrations/achievements";
-import { deleteObject } from "@/lib/storage";
-import { capacityOf } from "@/lib/storage/quota";
-import { addonPrice, planPrice, stripe } from "@/lib/billing/stripe";
+import { getAchievements, prefetchAchievements } from "@/lib/integrations/achievements";
+import { parseClipUrl } from "@/lib/clip-links";
 import { rateLimit } from "@/lib/security/rate-limit";
-import type { AddonId, Interval, PlanId } from "@/lib/plans";
 
 export type FormState = { error?: string; message?: string } | undefined;
 const site = () => process.env.NEXT_PUBLIC_SITE_URL!;
@@ -97,10 +95,6 @@ export async function deleteAccount(_: FormState, f: FormData): Promise<FormStat
   const { user } = await requireUser();
   if (str(f, "confirm") !== "DELETE") return { error: 'Type DELETE to confirm.' };
   const db = adminClient();
-  const { data: files } = await db.from("media_files").select("object_key").eq("owner_id", user.id);
-  for (const file of files ?? []) await deleteObject(file.object_key).catch(() => {});
-  const { data: sub } = await db.from("subscriptions").select("stripe_subscription_id").eq("user_id", user.id).single();
-  if (sub?.stripe_subscription_id) await stripe().subscriptions.cancel(sub.stripe_subscription_id).catch(() => {});
   await audit(user.id, "account.deleted");
   await db.auth.admin.deleteUser(user.id);
   await (await createClient()).auth.signOut();
@@ -174,6 +168,13 @@ export async function refreshAchievements(f: FormData) {
   revalidatePath(`/library/${str(f, "id")}`);
 }
 
+export async function refreshAllAchievements() {
+  const { user } = await requireUser();
+  if (!rateLimit(`achall:${user.id}`, 3, 600_000)) redirect("/achievements?error=Refresh+limit+reached.+Try+again+in+a+few+minutes");
+  const n = await prefetchAchievements(user.id, { maxAgeMs: 3600e3, limit: 80 });
+  redirect(`/achievements?message=${encodeURIComponent(`Updated achievements for ${n} games.`)}`);
+}
+
 // ---------- Collections ----------
 export async function createCollection(_: FormState, f: FormData): Promise<FormState> {
   const { supabase, user } = await requireUser();
@@ -228,7 +229,10 @@ export async function syncConnection(f: FormData) {
   const { user } = await requireUser();
   if (!rateLimit(`sync:${user.id}`, 5, 600_000)) redirect("/connections?error=Sync+limit+reached.+Try+again+in+a+few+minutes");
   let q = "synced=1";
-  try { const r = await syncAccount(user.id, str(f, "id")); q += `&imported=${r.imported}`; }
+  try {
+    const r = await syncAccount(user.id, str(f, "id")); q += `&imported=${r.imported}`;
+    after(() => prefetchAchievements(user.id, { limit: 150 }).catch(() => {}));
+  }
   catch (e) { q = `error=${encodeURIComponent(e instanceof Error ? e.message : "Sync failed")}`; }
   redirect(`/connections?${q}`);
 }
@@ -246,30 +250,33 @@ export async function disconnectAccount(f: FormData) {
   revalidatePath("/connections");
 }
 
-// ---------- Vault ----------
-export async function deleteMedia(f: FormData) {
-  const { user } = await requireUser();
-  const db = adminClient();
-  const { data: file } = await db.from("media_files").select("id, object_key").eq("id", str(f, "id")).eq("owner_id", user.id).single();
-  if (!file) return;
-  await deleteObject(file.object_key).catch(() => {});
-  await db.from("media_files").delete().eq("id", file.id);
-  // Lift the upload pause once the user is back under quota.
-  const [{ data: q }, { data: u }] = await Promise.all([
-    db.from("storage_quotas").select("*").eq("user_id", user.id).single(),
-    db.from("storage_usage").select("used_bytes").eq("user_id", user.id).single(),
-  ]);
-  if (q?.grace_until && u && Number(u.used_bytes) <= capacityOf(q))
-    await db.from("storage_quotas").update({ grace_until: null }).eq("user_id", user.id);
-  revalidatePath("/vault");
+// ---------- Clips ----------
+export async function addClip(_: FormState, f: FormData): Promise<FormState> {
+  const { supabase, user } = await requireUser();
+  if (!rateLimit(`clip:${user.id}`, 20, 600_000)) return { error: "You're posting too fast. Try again in a few minutes." };
+  const url = str(f, "url");
+  const parsed = parseClipUrl(url);
+  if (!parsed) return { error: "Paste a YouTube, Twitch clip or Streamable link." };
+  const v = vis.safeParse(f.get("visibility"));
+  const { error } = await supabase.from("clips").insert({
+    user_id: user.id, provider: parsed.provider, video_id: parsed.videoId, url: url.slice(0, 500),
+    title: str(f, "title").slice(0, 100) || null, game_id: str(f, "game_id") || null, visibility: v.success ? v.data : "friends",
+  });
+  if (error) return { error: "Could not post clip." };
+  revalidatePath("/clips");
+  return { message: "Clip posted!" };
+}
+
+export async function updateClip(f: FormData) {
+  const { supabase, user } = await requireUser();
+  const v = vis.safeParse(f.get("visibility"));
+  if (v.success) await supabase.from("clips").update({ visibility: v.data }).eq("id", str(f, "id")).eq("user_id", user.id);
   revalidatePath("/clips");
 }
 
-export async function updateMedia(f: FormData) {
+export async function deleteClip(f: FormData) {
   const { supabase, user } = await requireUser();
-  const v = vis.safeParse(f.get("visibility"));
-  if (v.success) await supabase.from("media_files").update({ visibility: v.data }).eq("id", str(f, "id")).eq("owner_id", user.id);
-  revalidatePath("/vault");
+  await supabase.from("clips").delete().eq("id", str(f, "id")).eq("user_id", user.id);
   revalidatePath("/clips");
 }
 
@@ -316,49 +323,4 @@ export async function reportUser(_: FormState, f: FormData): Promise<FormState> 
   if (reason.length < 3) return { error: "Describe the problem." };
   await supabase.from("reports").insert({ reporter_id: user.id, reported_user_id: str(f, "user_id"), reason: reason.slice(0, 1000) });
   return { message: "Report submitted. Thank you." };
-}
-
-// ---------- Billing ----------
-async function customerFor(userId: string, email?: string) {
-  const db = adminClient();
-  const { data: sub } = await db.from("subscriptions").select("stripe_customer_id").eq("user_id", userId).single();
-  if (sub?.stripe_customer_id) return sub.stripe_customer_id;
-  const c = await stripe().customers.create({ email, metadata: { user_id: userId } });
-  await db.from("subscriptions").update({ stripe_customer_id: c.id }).eq("user_id", userId);
-  return c.id;
-}
-
-export async function startCheckout(f: FormData) {
-  const { user } = await requireUser();
-  const plan = str(f, "plan") as Exclude<PlanId, "free">, interval = str(f, "interval") as Interval;
-  const price = planPrice(plan, interval);
-  if (!price) redirect("/billing?error=Plan+unavailable");
-  const { data: sub } = await adminClient().from("subscriptions").select("stripe_subscription_id, status").eq("user_id", user.id).single();
-  const customer = await customerFor(user.id, user.email);
-  if (sub?.stripe_subscription_id && sub.status !== "canceled") {
-    const s = await stripe().billingPortal.sessions.create({ customer, return_url: `${site()}/billing` });
-    redirect(s.url); // plan changes for existing subscribers go through the portal
-  }
-  const session = await stripe().checkout.sessions.create({
-    mode: "subscription", customer, line_items: [{ price, quantity: 1 }],
-    success_url: `${site()}/billing?success=1`, cancel_url: `${site()}/billing`,
-    subscription_data: { metadata: { user_id: user.id } },
-  });
-  redirect(session.url!);
-}
-
-export async function addStorageAddon(f: FormData) {
-  const { user } = await requireUser();
-  const addon = str(f, "addon") as AddonId;
-  const price = addonPrice(addon);
-  const { data: sub } = await adminClient().from("subscriptions").select("stripe_subscription_id, status").eq("user_id", user.id).single();
-  if (!price || !sub?.stripe_subscription_id || sub.status === "canceled") redirect("/billing?error=Add-ons+require+a+paid+plan");
-  await stripe().subscriptionItems.create({ subscription: sub.stripe_subscription_id, price, quantity: 1, proration_behavior: "create_prorations" });
-  redirect("/billing?success=addon"); // entitlement updates when the webhook arrives
-}
-
-export async function openBillingPortal() {
-  const { user } = await requireUser();
-  const s = await stripe().billingPortal.sessions.create({ customer: await customerFor(user.id, user.email), return_url: `${site()}/billing` });
-  redirect(s.url);
 }

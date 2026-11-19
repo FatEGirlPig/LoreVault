@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { PLATFORM_LABEL } from "@/components/ui";
+import { ClipCard } from "@/components/clip-card";
+import { listClips } from "@/lib/clips";
 
 // All reads go through RLS: anything the viewer may not see simply isn't returned.
 export default async function Profile({ params }: { params: Promise<{ username: string }> }) {
@@ -9,10 +11,11 @@ export default async function Profile({ params }: { params: Promise<{ username: 
   const { data: profile } = await supabase.from("profiles").select("*").eq("username", username.toLowerCase()).single();
   if (!profile) notFound();
 
-  const [{ data: games }, { data: collections }, { data: media }] = await Promise.all([
+  const [{ data: games }, { data: collections }, clips, { data: ach }] = await Promise.all([
     supabase.from("user_games").select("id, platform, status, games(title, cover_url)").eq("user_id", profile.id).limit(48),
     supabase.from("collections").select("id, name, collection_games(count)").eq("user_id", profile.id).order("position"),
-    supabase.from("media_files").select("id, filename, category").eq("owner_id", profile.id).order("created_at", { ascending: false }).limit(24),
+    listClips(supabase, user?.id ?? "", "public", profile.id),
+    supabase.from("user_achievements").select("unlocked, total").eq("user_id", profile.id).gt("total", 0),
   ]);
 
   return (
@@ -21,6 +24,9 @@ export default async function Profile({ params }: { params: Promise<{ username: 
         <h1 className="h1">{profile.display_name || profile.username}</h1>
         <p className="text-sm text-mute">@{profile.username}</p>
         {profile.bio && <p className="mt-3 max-w-2xl">{profile.bio}</p>}
+        {!!ach?.length && <div className="mt-4 flex flex-wrap gap-2">
+          <span className="badge border-cyan text-cyan">🏆 {ach.reduce((t, a) => t + a.unlocked, 0).toLocaleString()} achievements</span>
+          <span className="badge">{ach.filter((a) => a.unlocked === a.total).length} perfect games</span></div>}
         {user?.id === profile.id && <p className="mt-3 text-xs text-mute">You&apos;re viewing your own profile. Others only see what your privacy settings allow.</p>}
       </div>
       {!!collections?.length && <section className="mt-8">
@@ -36,12 +42,11 @@ export default async function Profile({ params }: { params: Promise<{ username: 
           return <div key={g.id} className="card p-3"><p className="truncate text-sm font-semibold">{game.title}</p><p className="text-xs text-mute">{PLATFORM_LABEL[g.platform] ?? g.platform}</p></div>;
         })}</div>
       </section>}
-      {!!media?.length && <section className="mt-8">
-        <h2 className="font-display font-bold">Shared media</h2>
-        <ul className="mt-3 grid gap-2 sm:grid-cols-3">{media.map((m) => (
-          <li key={m.id} className="card p-3 text-sm"><a href={`/api/vault/${m.id}/download`} className="hover:text-cyan">{m.filename}</a></li>))}</ul>
+      {!!clips.length && <section className="mt-8">
+        <h2 className="font-display font-bold">Clips</h2>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{clips.map((c) => <ClipCard key={c.id} clip={c} />)}</div>
       </section>}
-      {!games?.length && !collections?.length && !media?.length && <p className="mt-8 text-mute">Nothing shared here yet.</p>}
+      {!games?.length && !collections?.length && !clips.length && <p className="mt-8 text-mute">Nothing shared here yet.</p>}
     </div>
   );
 }

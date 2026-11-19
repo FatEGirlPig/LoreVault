@@ -1,0 +1,26 @@
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const NAV = [
+  ["/dashboard", "Dashboard"], ["/library", "Library"], ["/achievements", "Achievements"], ["/clips", "Clips"],
+  ["/collections", "Collections"], ["/friends", "Friends"], ["/connections", "Steam"], ["/settings", "Settings"],
+];
+
+export function SideNav() {
+  const path = usePathname();
+  return (
+    <nav className="flex gap-1 overflow-x-auto px-2 pb-3 md:flex-col md:pb-0" aria-label="Main">
+      {NAV.map(([href, label]) => {
+        const active = path === href || path.startsWith(href + "/");
+        return (
+          <Link key={href} href={href} prefetch aria-current={active ? "page" : undefined}
+            className={`relative whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors duration-200 ${active ? "bg-panel text-ink" : "text-mute hover:bg-panel/60 hover:text-ink"}`}>
+            {active && <span className="absolute inset-y-1.5 left-0 hidden w-0.5 rounded-full bg-gradient-to-b from-violet to-cyan md:block" />}
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}

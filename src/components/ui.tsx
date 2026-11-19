@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { formatBytes } from "@/lib/plans";
 
 export function Logo({ className = "" }: { className?: string }) {
   return (
@@ -8,21 +7,6 @@ export function Logo({ className = "" }: { className?: string }) {
         <path d="M16 2 29 9v14L16 30 3 23V9z" fill="none" stroke="url(#lg)" strokeWidth="2.5" /><path d="M11 10v12h10" fill="none" stroke="url(#lg)" strokeWidth="2.5" /></svg>
       LORE<span className="glow-text">VAULT</span>
     </Link>
-  );
-}
-
-export function StorageMeter({ used, capacity, compact = false }: { used: number; capacity: number; compact?: boolean }) {
-  const pct = Math.min(100, (used / Math.max(capacity, 1)) * 100);
-  const over = used > capacity;
-  return (
-    <div>
-      <div className="mb-1 flex justify-between text-xs text-mute">
-        <span>{formatBytes(used)} of {formatBytes(capacity)}</span>{!compact && <span>{pct.toFixed(1)}%</span>}
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-navy" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label="Storage used">
-        <div className={`h-full rounded-full ${over ? "bg-red-500" : pct > 85 ? "bg-amber-400" : "bg-gradient-to-r from-violet to-cyan"}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
   );
 }
 

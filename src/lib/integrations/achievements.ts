@@ -27,3 +27,22 @@ export async function getAchievements(userId: string, userGameId: string, opts: 
     return { ...fromCache(), error: e instanceof Error ? e.message : "Could not load achievements." };
   }
 }
+
+/** Fetch achievements for the user's most-played Steam games that have no (or stale) cache. Returns games refreshed. */
+export async function prefetchAchievements(userId: string, opts: { limit?: number; maxAgeMs?: number } = {}) {
+  const db = adminClient();
+  const maxAge = opts.maxAgeMs ?? 24 * 3600e3;
+  const { data: rows } = await db.from("user_games")
+    .select("id, playtime_minutes, user_achievements(fetched_at)")
+    .eq("user_id", userId).eq("platform", "steam").not("connected_account_id", "is", null)
+    .gt("playtime_minutes", 0).order("playtime_minutes", { ascending: false }).limit(500);
+  const todo = (rows ?? []).filter((r) => {
+    const f = (r.user_achievements as unknown as { fetched_at: string } | null)?.fetched_at;
+    return !f || Date.now() - new Date(f).getTime() > maxAge;
+  }).slice(0, opts.limit ?? 100);
+  let done = 0;
+  for (let i = 0; i < todo.length; i += 5) {   // 5 at a time to stay well inside Steam's rate limits
+    await Promise.all(todo.slice(i, i + 5).map((r) => getAchievements(userId, r.id, { force: true }).then(() => done++)));
+  }
+  return done;
+}

@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { adminClient, audit, getUser } from "@/lib/supabase/server";
 import { steam, verifySteamAssertion } from "@/lib/integrations/steam";
 import { syncAccount } from "@/lib/integrations/sync";
+import { prefetchAchievements } from "@/lib/integrations/achievements";
+import { after } from "next/server";
+
+export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
   const site = process.env.NEXT_PUBLIC_SITE_URL!;
@@ -31,7 +35,10 @@ export async function GET(req: NextRequest) {
   await audit(user.id, "connection.added", { platform: "steam" });
 
   let msg = "connected=steam";
-  try { const r = await syncAccount(user.id, account.id); msg += `&imported=${r.imported}`; }
+  try {
+    const r = await syncAccount(user.id, account.id); msg += `&imported=${r.imported}`;
+    after(() => prefetchAchievements(user.id, { limit: 150 }).catch(() => {}));
+  }
   catch (e) { msg += `&error=${encodeURIComponent(e instanceof Error ? e.message : "Sync failed")}`; }
   const res = back(msg);
   res.cookies.delete({ name: "steam_state", path: "/api/connections/steam" });

@@ -11,9 +11,8 @@ export default async function MarketingLayout({ children }: { children: React.Re
         <Logo />
         <nav className="flex flex-wrap items-center justify-end gap-2 text-sm sm:gap-3" aria-label="Main">
           <Link href="/features" className="hidden px-2 py-2 text-mute hover:text-ink sm:inline">Features</Link>
-          <Link href="/pricing" className="px-2 py-2 text-mute hover:text-ink">Pricing</Link>
           {user ? <>
-            <Link href="/dashboard" className="px-2 py-2 text-mute hover:text-ink">My Vault</Link>
+            <Link href="/dashboard" className="px-2 py-2 text-mute hover:text-ink">Dashboard</Link>
             <form action={signOut}><button className="btn-ghost">Log out</button></form>
           </> : <>
             <Link href="/login" className="btn-ghost">Log in</Link>
@@ -21,11 +20,11 @@ export default async function MarketingLayout({ children }: { children: React.Re
           </>}
         </nav>
       </header>
-      <main className="flex-1">{children}</main>
+      <main className="page-enter flex-1">{children}</main>
       <footer className="mx-auto w-full max-w-6xl border-t border-line px-4 py-8 text-xs text-mute">
         <div className="flex flex-wrap justify-between gap-4">
-          <span>© {new Date().getFullYear()} LoreVault. Not affiliated with any gaming platform.</span>
-          <span className="flex gap-4"><Link href="/features">Features</Link><Link href="/pricing">Pricing</Link></span>
+          <span>© {new Date().getFullYear()} LoreVault. Not affiliated with Valve or Steam.</span>
+          <span className="flex gap-4"><Link href="/features">Features</Link><Link href="/signup">Sign up</Link></span>
         </div>
       </footer>
     </div>
