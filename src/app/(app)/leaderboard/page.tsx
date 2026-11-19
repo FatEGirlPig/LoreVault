@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/server";
 import { Empty } from "@/components/ui";
 import { joinGlobalLeaderboard } from "@/app/actions";
 import { Submit } from "@/components/forms";
@@ -10,13 +10,13 @@ const BOARDS = [["achievements", "Achievements"], ["perfect", "Perfect games"], 
 
 export default async function Leaderboard({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams;
-  const scope = sp.scope === "global" ? "global" : "friends";
+  const { supabase, user } = await getUser();
+  const scope = !user || sp.scope === "global" ? "global" : "friends";
   const key = (BOARDS.find(([k]) => k === sp.by)?.[0] ?? "achievements") as (typeof BOARDS)[number][0];
-  const { supabase, user } = await requireUser();
   const { data } = await supabase.rpc(scope === "global" ? "global_leaderboard" : "friend_leaderboard");
   const rows = ((data ?? []) as Row[]).map((r) => ({ ...r, achievements: Number(r.achievements), perfect: Number(r.perfect), minutes: Number(r.minutes), games: Number(r.games) }))
     .sort((a, b) => b[key] - a[key]);
-  const myRank = rows.findIndex((r) => r.user_id === user.id);
+  const myRank = user ? rows.findIndex((r) => r.user_id === user?.id) : -1;
   const shown = scope === "global" ? rows.slice(0, 100) : rows;
   const fmt = (r: Row) => key === "minutes" ? `${Math.round(r.minutes / 60).toLocaleString()}h` : r[key].toLocaleString();
   const medal = ["🥇", "🥈", "🥉"];
@@ -25,7 +25,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
     <div className="space-y-6">
       <h1 className="h1">Leaderboard</h1>
       <nav className="flex gap-2" aria-label="Scope">
-        {(["friends", "global"] as const).map((sc) => (
+        {(user ? (["friends", "global"] as const) : (["global"] as const)).map((sc) => (
           <Link key={sc} href={`/leaderboard?scope=${sc}&by=${key}`} aria-current={scope === sc ? "page" : undefined}
             className={`btn px-4 ${scope === sc ? "btn-primary" : "btn-ghost"}`}>{sc === "friends" ? "👥 Friends" : "🌍 Global"}</Link>))}
       </nav>
@@ -34,7 +34,8 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
           <Link key={k} href={`/leaderboard?scope=${scope}&by=${k}`} aria-current={key === k ? "page" : undefined}
             className={`badge px-3 py-1 text-sm ${key === k ? "border-cyan text-cyan" : "hover:text-ink"}`}>{label}</Link>))}
       </nav>
-      {scope === "global" && (myRank >= 0
+      {scope === "global" && !user && <p className="text-sm text-mute"><Link href="/signup" className="text-cyan">Sign up free</Link> and connect Steam to see where you rank.</p>}
+      {scope === "global" && user && (myRank >= 0
         ? <p className="text-sm text-mute">You&apos;re ranked <b className="text-cyan">#{myRank + 1}</b> of {rows.length} players.</p>
         : <form action={joinGlobalLeaderboard} className="card flex flex-wrap items-center justify-between gap-3 border-cyan/50">
             <p className="text-sm">You&apos;re not on the global board yet. Joining makes your profile and game library public.</p>
@@ -42,11 +43,11 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
       {(scope === "global" ? rows.length > 0 : rows.length > 1) ? (
         <ol className="card divide-y divide-line p-0">
           {shown.map((r, i) => (
-            <li key={r.user_id} className={`flex items-center gap-4 px-5 py-3 ${r.user_id === user.id ? "bg-violet/10" : ""}`}>
+            <li key={r.user_id} className={`flex items-center gap-4 px-5 py-3 ${r.user_id === user?.id ? "bg-violet/10" : ""}`}>
               <span className="w-8 text-center font-display text-lg">{medal[i] ?? i + 1}</span>
               <span className="min-w-0 flex-1 truncate">
                 {r.username ? <Link href={`/profile/${r.username}`} className="font-semibold hover:text-cyan">{r.display_name || r.username}</Link> : "You"}
-                {r.user_id === user.id && <span className="ml-2 text-xs text-mute">(you)</span>}
+                {r.user_id === user?.id && <span className="ml-2 text-xs text-mute">(you)</span>}
               </span>
               <span className="glow-text font-display text-xl font-bold">{fmt(r)}</span>
             </li>))}

@@ -23,7 +23,7 @@ export default async function Home() {
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           {user ? <Link href="/dashboard" className="btn-primary px-6 py-3 text-base">Welcome back — enter LoreVault →</Link>
             : <Link href="/signup" className="btn-primary px-6 py-3 text-base">Get started — it&apos;s free</Link>}
-          <Link href="/features" className="btn-ghost px-6 py-3 text-base">See features</Link>
+          <Link href="/leaderboard?scope=global" className="btn-ghost px-6 py-3 text-base">Explore without an account</Link>
         </div>
       </section>
       <section className="mx-auto grid max-w-6xl gap-4 px-4 pb-20 sm:grid-cols-2 lg:grid-cols-4">
@@ -33,6 +33,15 @@ export default async function Home() {
             <h2 className="mt-3 font-display text-sm font-bold tracking-wider text-cyan">{t}</h2>
             <p className="mt-2 text-sm text-mute">{d}</p></div>
         ))}
+      </section>
+      <section className="mx-auto max-w-6xl px-4 pb-16">
+        <h2 className="mb-4 text-center font-display text-xl font-bold">Take a look around, no account needed</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {[["/leaderboard?scope=global", "🌍", "Global leaderboard"], ["/speedruns", "⏱️", "World-record speedruns"], ["/clips?tab=public", "🎬", "Community clips"],
+            ["/lfg", "🎮", "Looking for group"], ["/groups", "👥", "Groups & clans"]].map(([href, icon, label]) => (
+            <Link key={href} href={href} className="card text-center transition hover:-translate-y-1 hover:border-violet">
+              <div className="text-3xl" aria-hidden>{icon}</div><p className="mt-2 text-sm font-semibold">{label}</p></Link>))}
+        </div>
       </section>
       <section className="mx-auto max-w-4xl px-4 pb-24">
         <div className="card text-center">

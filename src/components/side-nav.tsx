@@ -8,11 +8,13 @@ const NAV = [
   ["/collections", "Collections"], ["/friends", "Friends"], ["/notifications", "Notifications"], ["/connections", "Steam"], ["/settings", "Settings"],
 ];
 
-export function SideNav({ unread = 0 }: { unread?: number }) {
+const GUEST = new Set(["/leaderboard", "/speedruns", "/clips", "/lfg", "/groups"]);
+
+export function SideNav({ unread = 0, guest = false }: { unread?: number; guest?: boolean }) {
   const path = usePathname();
   return (
     <nav className="flex gap-1 overflow-x-auto px-2 pb-3 md:flex-col md:overflow-y-auto md:pb-0" aria-label="Main">
-      {NAV.map(([href, label]) => {
+      {NAV.filter(([href]) => !guest || GUEST.has(href)).map(([href, label]) => {
         const active = path === href || path.startsWith(href + "/");
         return (
           <Link key={href} href={href} prefetch aria-current={active ? "page" : undefined}

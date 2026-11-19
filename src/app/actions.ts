@@ -59,10 +59,11 @@ export async function updatePassword(_: FormState, f: FormData): Promise<FormSta
   return { message: "Password updated." };
 }
 
-export async function signOut() {
+export async function signOut(f?: FormData) {
   const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/");
+  await supabase.auth.signOut({ scope: "local" });
+  const next = f ? str(f, "next") : "";
+  redirect(["/login", "/signup"].includes(next) ? next : "/");
 }
 
 // ---------- Profile & privacy ----------

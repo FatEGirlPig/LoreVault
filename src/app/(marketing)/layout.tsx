@@ -11,6 +11,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
         <Logo />
         <nav className="flex flex-wrap items-center justify-end gap-2 text-sm sm:gap-3" aria-label="Main">
           <Link href="/features" className="hidden px-2 py-2 text-mute hover:text-ink sm:inline">Features</Link>
+          <Link href="/leaderboard?scope=global" className="px-2 py-2 text-mute hover:text-ink">Explore</Link>
           {user ? <>
             <form action={signOut}><button className="px-2 py-2 text-mute hover:text-ink">Log out</button></form>
             <Link href="/dashboard" className="btn-primary">Enter LoreVault →</Link>

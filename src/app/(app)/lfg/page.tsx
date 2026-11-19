@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { adminClient, requireUser } from "@/lib/supabase/server";
+import { adminClient, getUser } from "@/lib/supabase/server";
 import { createLfg, deleteLfg, toggleLfgJoin } from "@/app/actions";
 import { ActionForm, ConfirmButton, Submit } from "@/components/forms";
 import { Empty } from "@/components/ui";
 export const metadata = { title: "Looking for Group" };
 
 export default async function Lfg() {
-  const { supabase, user } = await requireUser();
+  const { supabase, user } = await getUser();
   const { data: posts } = await supabase.from("lfg_posts").select("*, lfg_joins(user_id)").gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false }).limit(60);
   const ids = [...new Set((posts ?? []).flatMap((p) => [p.user_id, ...(p.lfg_joins as { user_id: string }[]).map((j) => j.user_id)]))];
@@ -16,7 +16,7 @@ export default async function Lfg() {
   return (
     <div className="space-y-6">
       <h1 className="h1">Looking for Group</h1>
-      <details className="card" open={!posts?.length}>
+      {!user ? <div className="card text-sm"><Link href="/signup" className="text-cyan">Sign up free</Link> to post or join a group.</div> : <details className="card" open={!posts?.length}>
         <summary className="cursor-pointer font-display font-bold">+ Find teammates</summary>
         <ActionForm action={createLfg} className="mt-4 grid gap-3 sm:grid-cols-2">
           <input name="game_title" required maxLength={120} placeholder="Game (e.g. Deep Rock Galactic)" className="input sm:col-span-2" aria-label="Game" />
@@ -31,10 +31,10 @@ export default async function Lfg() {
             <option value="public">Everyone</option><option value="friends">Friends</option></select></label>
           <div className="flex items-end"><Submit>Post</Submit></div>
         </ActionForm>
-      </details>
+      </details>}
       {posts?.length ? <ul className="grid gap-3 md:grid-cols-2">{posts.map((p) => {
         const joined = (p.lfg_joins as { user_id: string }[]);
-        const mine = p.user_id === user.id, inIt = joined.some((j) => j.user_id === user.id), full = joined.length >= p.slots;
+        const mine = p.user_id === user?.id, inIt = joined.some((j) => j.user_id === user?.id), full = joined.length >= p.slots;
         return (
           <li key={p.id} className="card space-y-2">
             <div className="flex items-start justify-between gap-2">
@@ -46,7 +46,7 @@ export default async function Lfg() {
             {p.note && <p className="text-sm">{p.note}</p>}
             {!!joined.length && <p className="text-xs text-mute">Joined: {joined.map((j) => `@${name(j.user_id)}`).join(", ")}</p>}
             <div className="flex gap-2">
-              {mine ? <form action={deleteLfg}><input type="hidden" name="id" value={p.id} /><ConfirmButton message="Close this post?">Close</ConfirmButton></form>
+              {!user ? <Link href="/signup" className="btn-primary">Join</Link> : mine ? <form action={deleteLfg}><input type="hidden" name="id" value={p.id} /><ConfirmButton message="Close this post?">Close</ConfirmButton></form>
                 : <form action={toggleLfgJoin}><input type="hidden" name="id" value={p.id} />
                     <Submit className={inIt ? "btn-ghost" : "btn-primary"}>{inIt ? "Leave" : full ? "Full" : "Join"}</Submit></form>}
             </div>
