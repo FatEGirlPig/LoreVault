@@ -64,7 +64,7 @@ export default async function Dashboard() {
       {!accounts?.length && (
         <div className="card flex flex-wrap items-center justify-between gap-4 border-cyan/50">
           <div><p className="font-semibold">Connect Steam to bring your library to life</p>
-            <p className="text-sm text-mute">Import every game, your playtime and every achievement in one click.</p></div>
+            <p className="text-sm text-mute">Import every game, your playtime and every achievement in one click. We never see your Steam password. <a href="/security" className="text-cyan hover:underline">Why it&apos;s safe</a></p></div>
           <a href="/api/connections/steam/start" className="btn-primary">Sign in with Steam</a>
         </div>
       )}

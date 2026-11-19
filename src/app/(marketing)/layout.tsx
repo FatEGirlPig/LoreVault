@@ -25,7 +25,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
       <footer className="mx-auto w-full max-w-6xl border-t border-line px-4 py-8 text-xs text-mute">
         <div className="flex flex-wrap justify-between gap-4">
           <span>© {new Date().getFullYear()} Vaultheim. Not affiliated with Valve or Steam.</span>
-          <span className="flex gap-4"><Link href="/features">Features</Link><Link href="/signup">Sign up</Link></span>
+          <span className="flex gap-4"><Link href="/features">Features</Link><Link href="/security">Security</Link><Link href="/signup">Sign up</Link></span>
         </div>
       </footer>
     </div>

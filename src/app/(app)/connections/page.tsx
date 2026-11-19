@@ -19,6 +19,18 @@ export default async function Connections({ searchParams }: { searchParams: Prom
       <h1 className="h1">Connections</h1>
       <p className="text-sm text-mute">Link your Steam account with Steam&apos;s official sign-in to import your games, playtime and achievements. We never see your Steam password. Games from other platforms can be added from your Library.</p>
       <Notice params={{ ...sp, message }} />
+      <div className="card flex flex-wrap items-start gap-3 border-cyan/40 text-sm">
+        <span className="text-2xl" aria-hidden>🔐</span>
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="font-semibold">Your Steam account stays safe</p>
+          <ul className="space-y-0.5 text-mute">
+            <li>▸ You sign in on <b className="text-ink">steamcommunity.com</b>, never here. We never see your password or Steam Guard codes.</li>
+            <li>▸ We get read-only access to your public games, playtime and achievements. We can&apos;t buy, trade or change anything.</li>
+            <li>▸ Check for <b className="text-ink">https://steamcommunity.com</b> in the address bar before you type your password.</li>
+          </ul>
+        </div>
+        <a href="/security" className="text-xs text-cyan hover:underline">How we protect you →</a>
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         {CONNECTORS.map((c) => {
           const acc = accounts?.find((a) => a.platform === c.platform);

@@ -25,6 +25,7 @@ export default async function Home() {
             : <Link href="/signup" className="btn-primary px-6 py-3 text-base">Get started — it&apos;s free</Link>}
           <Link href="/leaderboard?scope=global" className="btn-ghost px-6 py-3 text-base">Explore without an account</Link>
         </div>
+        <p className="mt-5 text-xs text-mute">🔐 Official Steam sign-in · we never see your Steam password · <Link href="/security" className="text-cyan hover:underline">How we keep you safe</Link></p>
       </section>
       <section className="mx-auto grid max-w-6xl gap-4 px-4 pb-20 sm:grid-cols-2 lg:grid-cols-4">
         {FEATURES.map(([icon, t, d]) => (

@@ -19,7 +19,7 @@ export default function Features() {
             <ul className="mt-3 space-y-1 text-sm text-mute">{items.map((i) => <li key={i}>▸ {i}</li>)}</ul></div>
         ))}
       </div>
-      <p className="mt-8 text-sm text-mute">We use Steam&apos;s official sign-in and never see your Steam password.</p>
+      <p className="mt-8 text-sm text-mute">We use Steam&apos;s official sign-in and never see your Steam password. <a href="/security" className="text-cyan hover:underline">How we keep your account safe →</a></p>
       <div className="mt-8 text-center"><Link href="/signup" className="btn-primary">Get started free</Link></div>
     </div>
   );
