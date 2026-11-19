@@ -5,7 +5,7 @@ import { Logo, StorageMeter } from "@/components/ui";
 import { capacityOf } from "@/lib/storage/quota";
 
 const NAV = [
-  ["/dashboard", "Dashboard"], ["/library", "Library"], ["/collections", "Collections"], ["/vault", "Vault"],
+  ["/dashboard", "Dashboard"], ["/library", "Library"], ["/collections", "Collections"], ["/clips", "Clips"], ["/vault", "Vault"],
   ["/connections", "Connections"], ["/friends", "Friends"], ["/billing", "Billing"], ["/settings", "Settings"],
 ];
 

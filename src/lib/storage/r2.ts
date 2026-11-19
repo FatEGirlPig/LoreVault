@@ -22,6 +22,10 @@ export const signedDownloadUrl = (Key: string, filename: string) =>
     Bucket: Bucket(), Key, ResponseContentDisposition: `attachment; filename="${filename.replace(/"/g, "")}"`,
   }), { expiresIn: TTL });
 
+/** Inline (playable) URL for videos and images, valid for an hour so players can seek. */
+export const signedStreamUrl = (Key: string, ContentType: string) =>
+  getSignedUrl(r2(), new GetObjectCommand({ Bucket: Bucket(), Key, ResponseContentType: ContentType, ResponseContentDisposition: "inline" }), { expiresIn: 3600 });
+
 export async function headObject(Key: string) {
   try {
     const h = await r2().send(new HeadObjectCommand({ Bucket: Bucket(), Key }));

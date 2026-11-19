@@ -9,6 +9,8 @@ import { rateLimit } from "@/lib/security/rate-limit";
 const Body = z.object({
   filename: z.string().min(1).max(255), contentType: z.string().max(100),
   size: z.number().int().positive(), folder: z.string().max(100).optional(),
+  title: z.string().max(100).optional(), visibility: z.enum(["private", "friends", "public"]).optional(),
+  gameId: z.uuid().optional(), clip: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -17,7 +19,8 @@ export async function POST(req: Request) {
   if (!rateLimit(`upload:${user.id}`, 30, 60_000)) return NextResponse.json({ error: "Too many uploads. Wait a minute." }, { status: 429 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-  const { filename, contentType, size, folder } = parsed.data;
+  const { filename, contentType, size, folder, title, visibility, gameId, clip } = parsed.data;
+  if (clip && !contentType.startsWith("video/")) return NextResponse.json({ error: "Clips must be MP4 or WebM videos." }, { status: 400 });
 
   const db = adminClient();
   const [{ data: quota }, { data: usage }, { data: pending }, { data: privacy }] = await Promise.all([
@@ -40,7 +43,8 @@ export async function POST(req: Request) {
   const objectKey = `${user.id}/${randomUUID()}/${safeName}`;
   const { data: file, error } = await db.from("media_files").insert({
     owner_id: user.id, object_key: objectKey, filename: safeName, content_type: contentType, size_bytes: size,
-    category: check.category, folder: folder || null, visibility: privacy?.media_default ?? "private",
+    category: check.category, folder: folder || null, title: title?.trim() || null, game_id: gameId ?? null,
+    visibility: visibility ?? privacy?.media_default ?? "private",
   }).select("id").single();
   if (error) return NextResponse.json({ error: "Could not start upload." }, { status: 500 });
 

@@ -262,6 +262,7 @@ export async function deleteMedia(f: FormData) {
   if (q?.grace_until && u && Number(u.used_bytes) <= capacityOf(q))
     await db.from("storage_quotas").update({ grace_until: null }).eq("user_id", user.id);
   revalidatePath("/vault");
+  revalidatePath("/clips");
 }
 
 export async function updateMedia(f: FormData) {
@@ -269,6 +270,7 @@ export async function updateMedia(f: FormData) {
   const v = vis.safeParse(f.get("visibility"));
   if (v.success) await supabase.from("media_files").update({ visibility: v.data }).eq("id", str(f, "id")).eq("owner_id", user.id);
   revalidatePath("/vault");
+  revalidatePath("/clips");
 }
 
 // ---------- Social ----------

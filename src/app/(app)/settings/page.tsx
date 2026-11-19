@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/supabase/server";
 import { deleteAccount, updatePassword, updatePrivacy, updateProfile } from "@/app/actions";
 import { ActionForm, Submit } from "@/components/forms";
 import { VisibilitySelect } from "@/components/ui";
+import { SoundSettings } from "@/components/sound";
 export const metadata = { title: "Settings" };
 
 const PRIVACY: [string, string][] = [
@@ -36,6 +37,8 @@ export default async function Settings() {
           {PRIVACY.map(([k, l]) => <VisibilitySelect key={k} name={k} label={l} value={(privacy as Record<string, string> | null)?.[k] ?? "private"} />)}
           <div className="flex items-end"><Submit>Save privacy</Submit></div>
         </ActionForm></section>
+
+      <section id="sound" className="card"><h2 className="mb-4 font-display font-bold">Sound</h2><SoundSettings /></section>
 
       <section id="password" className="card"><h2 className="mb-4 font-display font-bold">Password</h2>
         <ActionForm action={updatePassword} className="flex flex-wrap gap-3">
