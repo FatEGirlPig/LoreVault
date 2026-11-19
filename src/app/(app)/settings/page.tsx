@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/supabase/server";
-import { deleteAccount, updatePassword, updatePrivacy, updateProfile } from "@/app/actions";
+import { deleteAccount, updateCustomization, updatePassword, updatePrivacy, updateProfile } from "@/app/actions";
+import { loadStats } from "@/lib/stats";
 import { ActionForm, Submit } from "@/components/forms";
 import { Notice, VisibilitySelect } from "@/components/ui";
 import { SoundSettings } from "@/components/sound";
@@ -13,10 +14,16 @@ const PRIVACY: [string, string][] = [
 export default async function Settings({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams;
   const { supabase, user } = await requireUser();
-  const [{ data: profile }, { data: privacy }] = await Promise.all([
+  const [{ data: profile }, { data: privacy }, { data: top }, full] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("privacy_settings").select("*").eq("user_id", user.id).single(),
+    supabase.from("user_games").select("id, game_id, playtime_minutes, games(title)").eq("user_id", user.id).order("playtime_minutes", { ascending: false, nullsFirst: false }).limit(40),
+    loadStats(supabase, user.id),
   ]);
+  const topGames = (top ?? []).map((t) => ({ id: t.id, gameId: t.game_id, title: (t.games as unknown as { title: string }).title, h: Math.round((t.playtime_minutes ?? 0) / 60) }));
+  const showcase = new Set((profile?.showcase as string[] | undefined) ?? []);
+  const pinnedKeys = new Set(((profile?.pinned as { ugId: string; id: string }[] | undefined) ?? []).map((p) => `${p.ugId}:${p.id}`));
+  const rarest = full.rarest.slice(0, 24);
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -46,6 +53,27 @@ export default async function Settings({ searchParams }: { searchParams: Promise
           <p className="text-xs text-mute sm:col-span-2">To appear on the global leaderboard and get a shareable stats card, set both Profile page and Gaming library to Public.</p>
           <div className="flex items-end"><Submit>Save privacy</Submit></div>
         </ActionForm></section>
+
+      <section id="look" className="card"><h2 className="mb-1 font-display font-bold">Profile look</h2>
+        <p className="mb-4 text-sm text-mute">Make your public profile yours.</p>
+        <ActionForm action={updateCustomization} className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label><span className="label">Accent colour</span><input type="color" name="accent" defaultValue={profile?.accent ?? "#8b5cf6"} className="h-10 w-full cursor-pointer rounded-xl border border-line bg-navy" /></label>
+            <label><span className="label">Banner (game art)</span><select name="banner_game_id" defaultValue={profile?.banner_game_id ?? ""} className="input">
+              <option value="">None</option>{topGames.map((g) => <option key={g.id} value={g.gameId}>{g.title}</option>)}</select></label>
+          </div>
+          <fieldset><legend className="label">Showcase games (up to 6)</legend>
+            <div className="grid max-h-56 gap-1 overflow-y-auto rounded-xl border border-line p-2 sm:grid-cols-2">{topGames.map((g) => (
+              <label key={g.id} className="flex items-center gap-2 text-sm"><input type="checkbox" name="showcase" value={g.id} defaultChecked={showcase.has(g.id)} />
+                <span className="truncate">{g.title}</span><span className="ml-auto text-xs text-mute">{g.h}h</span></label>))}</div></fieldset>
+          {!!rarest.length && <fieldset><legend className="label">Pinned achievements (up to 3) · your rarest</legend>
+            <div className="grid max-h-56 gap-1 overflow-y-auto rounded-xl border border-line p-2 sm:grid-cols-2">{rarest.map((a) => (
+              <label key={a.ugId + a.id} className="flex items-center gap-2 text-sm"><input type="checkbox" name="pinned" value={`${a.ugId}:${a.id}`} defaultChecked={pinnedKeys.has(`${a.ugId}:${a.id}`)} />
+                <span className="truncate">{a.name}</span><span className="ml-auto shrink-0 text-xs text-mute">{a.globalPercent}% · {a.game}</span></label>))}</div></fieldset>}
+          <p className="text-xs text-mute">Only the first 6 showcase games and first 3 achievements you tick are kept.</p>
+          <Submit>Save look</Submit>
+        </ActionForm>
+      </section>
 
       <section id="sound" className="card"><h2 className="mb-4 font-display font-bold">Sound</h2><SoundSettings /></section>
 

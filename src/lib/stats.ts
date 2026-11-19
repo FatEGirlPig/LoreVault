@@ -28,3 +28,13 @@ export async function loadStats(db: SupabaseClient, userId: string) {
   };
   return { rows, unlocks, rarest, stats, badges: computeBadges(stats) };
 }
+
+import { completedChallenges, computeStreak, computeXp, levelFromXp, weeklyChallenges } from "@/lib/gamer";
+
+/** Level, streak and this week's challenges for a user, from the same stats load. */
+export function gamerProgress(s: Awaited<ReturnType<typeof loadStats>>) {
+  const rareUnlocks = s.unlocks.filter((u) => (u.globalPercent ?? 100) < 10).length;
+  const challenges = completedChallenges(s.unlocks);
+  const xp = computeXp({ achievements: s.stats.achievements, perfect: s.stats.perfect, clips: s.stats.clips, friends: s.stats.friends, challenges, rareUnlocks });
+  return { level: levelFromXp(xp), streak: computeStreak(s.unlocks), week: weeklyChallenges(s.unlocks), challengesDone: challenges };
+}

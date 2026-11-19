@@ -3,6 +3,9 @@ import { requireUser } from "@/lib/supabase/server";
 import { refreshAchievements, removeUserGame, toggleCollectionGame, updateUserGame } from "@/app/actions";
 import { getAchievements } from "@/lib/integrations/achievements";
 import { getStoreInfo } from "@/lib/integrations/store";
+import { refreshDeck, refreshPrices } from "@/lib/integrations/market";
+import { after } from "next/server";
+import Link from "next/link";
 import { Achievements } from "@/components/achievements";
 import { ActionForm, ConfirmButton, Submit } from "@/components/forms";
 import { PLATFORM_LABEL, SOURCE_LABEL } from "@/components/ui";
@@ -22,6 +25,15 @@ export default async function GameDetail({ params }: { params: Promise<{ id: str
     ug.platform === "steam" && ug.connected_account_id ? getAchievements(user.id, ug.id) : null,
     getStoreInfo(game.id),
   ]);
+  const [{ data: market }, { data: board }] = await Promise.all([
+    supabase.from("games").select("price_cents, initial_price_cents, discount_percent, currency, is_free, deck_status, price_checked_at, deck_checked_at").eq("id", game.id).single(),
+    supabase.rpc("game_leaderboard", { gid: game.id }),
+  ]);
+  if (ug.platform === "steam" && (!market?.price_checked_at || !market?.deck_checked_at)) after(async () => { await refreshPrices([game.id]); await refreshDeck([game.id]); });
+  const DECK: Record<number, [string, string]> = { 3: ["✅ Steam Deck Verified", "border-cyan text-cyan"], 2: ["🟡 Steam Deck Playable", "border-amber-400 text-amber-300"], 1: ["⛔ Not supported on Steam Deck", "border-red-500/50 text-red-300"] };
+  const deck = market?.deck_status ? DECK[market.deck_status] : null;
+  const price = market?.is_free ? "Free to play" : market?.price_cents != null ? `${(market.price_cents / 100).toFixed(2)} ${market.currency ?? ""}` : null;
+  const ranks = ((board ?? []) as { user_id: string; username: string; unlocked: number; total: number; minutes: number }[]);
 
   return (
     <div className="space-y-6">
@@ -33,6 +45,10 @@ export default async function GameDetail({ params }: { params: Promise<{ id: str
             {store?.description && <p className="text-sm">{store.description}</p>}
             {!!store?.genres?.length && <div className="flex flex-wrap gap-1">{store.genres.map((g) => <span key={g} className="badge bg-void/60">{g}</span>)}</div>}
             <p className="text-xs text-mute">{[store?.developer, store?.release_date].filter(Boolean).join(" · ")}</p>
+            <div className="flex flex-wrap gap-2">
+              {deck && <span className={`badge bg-void/60 ${deck[1]}`}>{deck[0]}</span>}
+              {price && <span className="badge bg-void/60">{market?.discount_percent ? <><span className="mr-1 text-cyan">-{market.discount_percent}%</span>{price}</> : price}</span>}
+            </div>
             {game.external_id && ug.platform === "steam" && <a href={`https://store.steampowered.com/app/${game.external_id}`} target="_blank" rel="noopener noreferrer" className="inline-block text-xs text-cyan hover:underline">View on Steam ↗</a>}
           </div>
         </div>
@@ -57,6 +73,17 @@ export default async function GameDetail({ params }: { params: Promise<{ id: str
         </section>
       )}
       {ach && ach.total === 0 && !ach.error && <p className="text-sm text-mute">This game has no Steam achievements.</p>}
+
+      {ranks.length > 1 && <section className="card">
+        <h2 className="mb-3 font-display font-bold">LoreVault leaderboard <span className="text-sm font-normal text-mute">· {ranks.length} players own this</span></h2>
+        <ol className="divide-y divide-line">{ranks.slice(0, 10).map((r, i) => (
+          <li key={r.user_id} className={`flex items-center gap-3 py-2 text-sm ${r.user_id === user.id ? "text-cyan" : ""}`}>
+            <span className="w-7 text-center font-display">{["🥇", "🥈", "🥉"][i] ?? i + 1}</span>
+            <Link href={`/profile/${r.username}`} className="min-w-0 flex-1 truncate hover:text-cyan">{r.username}</Link>
+            <span className="text-mute">{Math.round(r.minutes / 60)}h</span>
+            <span className="w-24 text-right font-display">{r.total ? `${Math.round((r.unlocked / r.total) * 100)}% · ${r.unlocked}/${r.total}` : "—"}</span>
+          </li>))}</ol>
+      </section>}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card lg:col-span-2"><h2 className="mb-3 font-display font-bold">Tracking</h2>

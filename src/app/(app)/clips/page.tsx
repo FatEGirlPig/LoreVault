@@ -5,6 +5,8 @@ import { ActionForm, AutoSelect, ConfirmButton, Submit } from "@/components/form
 import { ClipCard } from "@/components/clip-card";
 import { Empty } from "@/components/ui";
 import { listClips } from "@/lib/clips";
+import { loadSocial } from "@/lib/social";
+import { Social } from "@/components/social";
 export const metadata = { title: "Clips" };
 
 const TABS = [["friends", "Friends"], ["public", "Public"], ["mine", "My clips"]] as const;
@@ -17,6 +19,7 @@ export default async function Clips({ searchParams }: { searchParams: Promise<Re
     listClips(supabase, user.id, tab),
     supabase.from("user_games").select("games(id, title)").eq("user_id", user.id).limit(1000),
   ]);
+  const social = await loadSocial(supabase, user.id, "clip", clips.map((c) => c.id));
   const gameList = (games ?? []).map((g) => g.games as unknown as { id: string; title: string }).sort((a, b) => a.title.localeCompare(b.title));
 
   return (
@@ -44,7 +47,7 @@ export default async function Clips({ searchParams }: { searchParams: Promise<Re
       {clips.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {clips.map((c) => (
-            <ClipCard key={c.id} clip={c} actions={c.user_id === user.id && <>
+            <ClipCard key={c.id} clip={c} footer={<Social type="clip" id={c.id} data={social.get(c.id)} viewer={user.id} path={`/clips?tab=${tab}`} />} actions={c.user_id === user.id && <>
               <form action={updateClip} className="w-28"><input type="hidden" name="id" value={c.id} />
                 <AutoSelect name="visibility" defaultValue={c.visibility} aria-label="Visibility">
                   <option value="private">Only me</option><option value="friends">Friends</option><option value="public">Public</option></AutoSelect></form>

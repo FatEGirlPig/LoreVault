@@ -109,3 +109,38 @@ export async function fetchSteamAchievements(steamId: string, appId: string): Pr
   const global = globalRes.ok ? await globalRes.json() : null;
   return mergeAchievements(schema, player, global);
 }
+
+/** appid → minutes played in the last 2 weeks (public profiles only). */
+export async function fetchRecentlyPlayed(steamId: string): Promise<Map<string, number>> {
+  const r = await fetch(`${API}/IPlayerService/GetRecentlyPlayedGames/v1/?key=${key()}&steamid=${steamId}&count=50`);
+  const games = r.ok ? ((await r.json())?.response?.games ?? []) as { appid: number; playtime_2weeks?: number }[] : [];
+  return new Map(games.map((g) => [String(g.appid), g.playtime_2weeks ?? 0]));
+}
+
+export type Price = { cents: number | null; initial: number | null; discount: number; currency: string | null; free: boolean };
+/** Batched store prices (the price_overview filter allows many appids per request). */
+export async function fetchPrices(appIds: string[]): Promise<Map<string, Price>> {
+  const out = new Map<string, Price>();
+  for (let i = 0; i < appIds.length; i += 50) {
+    const ids = appIds.slice(i, i + 50);
+    try {
+      const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${ids.join(",")}&filters=price_overview&cc=us`, { signal: AbortSignal.timeout(8000) });
+      const j = await r.json();
+      for (const id of ids) {
+        const e = j?.[id]; if (!e?.success) continue;
+        const p = e.data?.price_overview;
+        out.set(id, p ? { cents: p.final, initial: p.initial, discount: p.discount_percent ?? 0, currency: p.currency, free: false }
+          : { cents: 0, initial: 0, discount: 0, currency: null, free: true });
+      }
+    } catch { /* skip this batch */ }
+  }
+  return out;
+}
+
+/** Steam Deck compatibility: 3 Verified, 2 Playable, 1 Unsupported, 0 Unknown. */
+export async function fetchDeckStatus(appId: string): Promise<number> {
+  try {
+    const r = await fetch(`https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID=${appId}&l=english`, { signal: AbortSignal.timeout(5000) });
+    return Number((await r.json())?.results?.resolved_category ?? 0) || 0;
+  } catch { return 0; }
+}

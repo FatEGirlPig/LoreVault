@@ -7,7 +7,7 @@ type Clip = { id: string; provider: string; video_id: string; title: string | nu
 const PROVIDER = { youtube: "YouTube", twitch: "Twitch", streamable: "Streamable" } as Record<string, string>;
 
 /** Click-to-load embed: nothing from YouTube/Twitch loads until the viewer presses play. */
-export function ClipCard({ clip, actions }: { clip: Clip; actions?: React.ReactNode }) {
+export function ClipCard({ clip, actions, footer }: { clip: Clip; actions?: React.ReactNode; footer?: React.ReactNode }) {
   const [playing, setPlaying] = useState(false);
   const [host, setHost] = useState("");
   const [copied, setCopied] = useState(false);
@@ -42,6 +42,7 @@ export function ClipCard({ clip, actions }: { clip: Clip; actions?: React.ReactN
           }}>{copied ? "Link copied" : "Copy link"}</button>}
           {actions}
         </div>
+        {footer && <div className="border-t border-line pt-3">{footer}</div>}
       </div>
     </article>
   );

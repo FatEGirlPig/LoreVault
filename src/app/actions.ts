@@ -8,6 +8,7 @@ import { adminClient, audit, createClient, requireUser } from "@/lib/supabase/se
 import { syncAccount } from "@/lib/integrations/sync";
 import { getAchievements, prefetchAchievements } from "@/lib/integrations/achievements";
 import { parseClipUrl } from "@/lib/clip-links";
+import { notify } from "@/lib/notify";
 import { rateLimit } from "@/lib/security/rate-limit";
 
 export type FormState = { error?: string; message?: string } | undefined;
@@ -301,6 +302,7 @@ export async function sendFriendRequest(_: FormState, f: FormData): Promise<Form
   if (!target || target.id === user.id) return { error: "No user found with that username." };
   const { error } = await supabase.from("friendships").insert({ requester_id: user.id, addressee_id: target.id });
   if (error) return { error: error.code === "23505" ? "A request already exists." : "Could not send request." };
+  await notify(target.id, "friend_request", {}, user.id);
   revalidatePath("/friends");
   return { message: "Friend request sent." };
 }
@@ -309,7 +311,10 @@ export async function respondFriend(f: FormData) {
   const { supabase, user } = await requireUser();
   const id = str(f, "id");
   if (f.get("action") === "accept")
-    await supabase.from("friendships").update({ status: "accepted", responded_at: new Date().toISOString() }).eq("id", id).eq("addressee_id", user.id);
+  {
+    const { data: fr } = await supabase.from("friendships").update({ status: "accepted", responded_at: new Date().toISOString() }).eq("id", id).eq("addressee_id", user.id).select("requester_id").maybeSingle();
+    if (fr) await notify(fr.requester_id, "friend_accepted", {}, user.id);
+  }
   else await supabase.from("friendships").delete().eq("id", id);
   revalidatePath("/friends");
 }
@@ -335,4 +340,138 @@ export async function reportUser(_: FormState, f: FormData): Promise<FormState> 
   if (reason.length < 3) return { error: "Describe the problem." };
   await supabase.from("reports").insert({ reporter_id: user.id, reported_user_id: str(f, "user_id"), reason: reason.slice(0, 1000) });
   return { message: "Report submitted. Thank you." };
+}
+
+// ---------- Reactions & comments ----------
+const TARGETS = ["clip", "activity"] as const;
+async function targetOwner(type: string, id: string) {
+  const { data } = type === "clip"
+    ? await adminClient().from("clips").select("user_id, title").eq("id", id).maybeSingle()
+    : await adminClient().from("activity_events").select("user_id, payload").eq("id", id).maybeSingle();
+  return data as { user_id: string; title?: string; payload?: { game?: string; name?: string } } | null;
+}
+
+export async function toggleReaction(f: FormData) {
+  const { supabase, user } = await requireUser();
+  const type = str(f, "type"), id = str(f, "id"), emoji = str(f, "emoji");
+  if (!TARGETS.includes(type as never)) return;
+  const key = { target_type: type, target_id: id, user_id: user.id, emoji };
+  const { data: existing } = await supabase.from("reactions").select("emoji").match(key).maybeSingle();
+  if (existing) await supabase.from("reactions").delete().match(key);
+  else {
+    const { error } = await supabase.from("reactions").insert(key);
+    const owner = !error ? await targetOwner(type, id) : null;
+    if (owner) await notify(owner.user_id, "reaction", { type, id, emoji, label: owner.title ?? owner.payload?.name ?? owner.payload?.game }, user.id);
+  }
+  revalidatePath(str(f, "path") || "/dashboard");
+}
+
+export async function addComment(_: FormState, f: FormData): Promise<FormState> {
+  const { supabase, user } = await requireUser();
+  if (!rateLimit(`comment:${user.id}`, 30, 600_000)) return { error: "Slow down a little." };
+  const type = str(f, "type"), id = str(f, "id"), body = str(f, "body").slice(0, 500);
+  if (!TARGETS.includes(type as never) || !body) return { error: "Write something first." };
+  const { error } = await supabase.from("comments").insert({ target_type: type, target_id: id, user_id: user.id, body });
+  if (error) return { error: "Could not post comment." };
+  const owner = await targetOwner(type, id);
+  if (owner) await notify(owner.user_id, "comment", { type, id, body: body.slice(0, 80), label: owner.title ?? owner.payload?.name ?? owner.payload?.game }, user.id);
+  revalidatePath(str(f, "path") || "/dashboard");
+  return { message: "" };
+}
+
+export async function deleteComment(f: FormData) {
+  const { supabase, user } = await requireUser();
+  await supabase.from("comments").delete().eq("id", str(f, "id")).eq("user_id", user.id);
+  revalidatePath(str(f, "path") || "/dashboard");
+}
+
+// ---------- Notifications ----------
+export async function markNotificationsRead() {
+  const { supabase, user } = await requireUser();
+  await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", user.id).is("read_at", null);
+  revalidatePath("/notifications");
+}
+
+// ---------- Looking for group ----------
+export async function createLfg(_: FormState, f: FormData): Promise<FormState> {
+  const { supabase, user } = await requireUser();
+  if (!rateLimit(`lfg:${user.id}`, 10, 3600_000)) return { error: "You've posted a lot recently. Try again later." };
+  const game_title = str(f, "game_title").slice(0, 120), slots = Number(f.get("slots")) || 1;
+  if (!game_title) return { error: "Which game?" };
+  const hours = Math.min(72, Math.max(1, Number(f.get("hours")) || 24));
+  const v = vis.safeParse(f.get("visibility"));
+  const { error } = await supabase.from("lfg_posts").insert({
+    user_id: user.id, game_title, slots: Math.min(20, Math.max(1, slots)), play_time: str(f, "play_time").slice(0, 60) || null,
+    note: str(f, "note").slice(0, 300) || null, platform: str(f, "platform") || null, visibility: v.success ? v.data : "public",
+    expires_at: new Date(Date.now() + hours * 3600e3).toISOString(),
+  });
+  if (error) return { error: "Could not create post." };
+  revalidatePath("/lfg");
+  return { message: "Posted! Players can now join." };
+}
+
+export async function toggleLfgJoin(f: FormData) {
+  const { supabase, user } = await requireUser();
+  const post_id = str(f, "id");
+  const { data: joined } = await supabase.from("lfg_joins").select("post_id").match({ post_id, user_id: user.id }).maybeSingle();
+  if (joined) await supabase.from("lfg_joins").delete().match({ post_id, user_id: user.id });
+  else {
+    const { data: post } = await supabase.from("lfg_posts").select("user_id, game_title, slots, lfg_joins(count)").eq("id", post_id).single();
+    const taken = (post?.lfg_joins as unknown as { count: number }[] | undefined)?.[0]?.count ?? 0;
+    if (post && taken < post.slots && !(await supabase.from("lfg_joins").insert({ post_id, user_id: user.id })).error)
+      await notify(post.user_id, "lfg_join", { game: post.game_title, postId: post_id }, user.id);
+  }
+  revalidatePath("/lfg");
+}
+
+export async function deleteLfg(f: FormData) {
+  const { supabase, user } = await requireUser();
+  await supabase.from("lfg_posts").delete().eq("id", str(f, "id")).eq("user_id", user.id);
+  revalidatePath("/lfg");
+}
+
+// ---------- Groups ----------
+export async function createGroup(_: FormState, f: FormData): Promise<FormState> {
+  const { supabase, user } = await requireUser();
+  const name = str(f, "name").slice(0, 50);
+  const slug = (str(f, "slug") || name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32);
+  if (name.length < 2 || slug.length < 3) return { error: "Name must be at least 2 characters (and the link at least 3)." };
+  const { data: g, error } = await supabase.from("groups").insert({ name, slug, description: str(f, "description").slice(0, 500) || null, owner_id: user.id }).select("id").single();
+  if (error) return { error: error.code === "23505" ? "That group link is taken." : "Could not create group." };
+  await adminClient().from("group_members").insert({ group_id: g.id, user_id: user.id, role: "owner" });
+  redirect(`/groups/${slug}`);
+}
+
+export async function toggleGroupMembership(f: FormData) {
+  const { supabase, user } = await requireUser();
+  const group_id = str(f, "id"), slug = str(f, "slug");
+  const { data: m } = await supabase.from("group_members").select("role").match({ group_id, user_id: user.id }).maybeSingle();
+  if (m?.role === "owner") return; // owners delete the group instead
+  if (m) await supabase.from("group_members").delete().match({ group_id, user_id: user.id });
+  else {
+    await supabase.from("group_members").insert({ group_id, user_id: user.id });
+    const { data: g } = await supabase.from("groups").select("owner_id, name").eq("id", group_id).single();
+    if (g) await notify(g.owner_id, "group_join", { group: g.name, slug }, user.id);
+  }
+  revalidatePath(`/groups/${slug}`);
+}
+
+export async function deleteGroup(f: FormData) {
+  const { supabase, user } = await requireUser();
+  await supabase.from("groups").delete().eq("id", str(f, "id")).eq("owner_id", user.id);
+  redirect("/groups");
+}
+
+// ---------- Profile customization ----------
+export async function updateCustomization(_: FormState, f: FormData): Promise<FormState> {
+  const { supabase, user } = await requireUser();
+  const accent = str(f, "accent");
+  const showcase = f.getAll("showcase").map(String).filter(Boolean).slice(0, 6);
+  const pinned = f.getAll("pinned").map(String).filter(Boolean).slice(0, 3).map((v) => { const [ugId, ...id] = v.split(":"); return { ugId, id: id.join(":") }; });
+  const { error } = await supabase.from("profiles").update({
+    accent: /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : null, banner_game_id: str(f, "banner_game_id") || null, showcase, pinned,
+  }).eq("id", user.id);
+  if (error) return { error: "Could not save." };
+  revalidatePath("/settings");
+  return { message: "Profile look saved." };
 }

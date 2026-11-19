@@ -34,6 +34,20 @@ export async function syncAccount(userId: string, accountId: string) {
         })), { onConflict: "user_id,game_id,platform" });
         if (e2) throw e2;
       }
+      // Recently played (last 2 weeks) powers "friends are playing".
+      if (account.platform === "steam") {
+        const { fetchRecentlyPlayed } = await import("./steam");
+        const recent = await fetchRecentlyPlayed(account.external_user_id).catch(() => new Map<string, number>());
+        await db.from("user_games").update({ playtime_2weeks: null }).eq("user_id", userId).not("playtime_2weeks", "is", null);
+        if (recent.size) {
+          const { data: owned } = await db.from("user_games").select("id, games!inner(external_id)").eq("user_id", userId).eq("platform", "steam")
+            .in("games.external_id", [...recent.keys()]);
+          for (const o of owned ?? []) {
+            const ext = (o.games as unknown as { external_id: string }).external_id;
+            await db.from("user_games").update({ playtime_2weeks: recent.get(ext) ?? 0 }).eq("id", o.id);
+          }
+        }
+      }
       await db.from("connected_accounts").update({
         status: "connected", last_synced_at: now, last_error: null,
         available_data: ["identity", ...dataTypes],
