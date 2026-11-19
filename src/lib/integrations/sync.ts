@@ -41,7 +41,8 @@ export async function syncAccount(userId: string, accountId: string) {
       await db.from("game_sync_jobs").update({ status: "succeeded", attempt, games_imported: games.length, finished_at: now }).eq("id", job!.id);
       return { imported: games.length };
     } catch (e) {
-      lastError = e instanceof Error ? e.message : "Sync failed.";
+      lastError = e instanceof Error ? e.message : (e as { message?: string })?.message ?? "Sync failed.";
+      console.error("sync attempt failed", e);
       if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
     }
   }
