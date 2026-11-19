@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { getUser } from "@/lib/supabase/server";
+import { signOut } from "@/app/actions";
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
   const { user } = await getUser();
@@ -8,12 +9,16 @@ export default async function MarketingLayout({ children }: { children: React.Re
     <div className="flex min-h-dvh flex-col">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-5">
         <Logo />
-        <nav className="flex items-center gap-1 text-sm sm:gap-4">
-          <Link href="/features" className="hidden px-2 text-mute hover:text-ink sm:inline">Features</Link>
-          <Link href="/pricing" className="px-2 text-mute hover:text-ink">Pricing</Link>
-          {user ? <Link href="/dashboard" className="btn-primary">Open app</Link> : <>
-            <Link href="/login" className="px-2 text-mute hover:text-ink">Log in</Link>
-            <Link href="/signup" className="btn-primary">Get started free</Link></>}
+        <nav className="flex flex-wrap items-center justify-end gap-2 text-sm sm:gap-3" aria-label="Main">
+          <Link href="/features" className="hidden px-2 py-2 text-mute hover:text-ink sm:inline">Features</Link>
+          <Link href="/pricing" className="px-2 py-2 text-mute hover:text-ink">Pricing</Link>
+          {user ? <>
+            <Link href="/dashboard" className="px-2 py-2 text-mute hover:text-ink">My Vault</Link>
+            <form action={signOut}><button className="btn-ghost">Log out</button></form>
+          </> : <>
+            <Link href="/login" className="btn-ghost">Log in</Link>
+            <Link href="/signup" className="btn-primary">Sign up free</Link>
+          </>}
         </nav>
       </header>
       <main className="flex-1">{children}</main>

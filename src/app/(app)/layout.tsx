@@ -19,7 +19,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="md:flex">
       <aside className="border-b border-line bg-void/60 md:sticky md:top-0 md:h-dvh md:w-60 md:shrink-0 md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between px-4 py-4"><Logo /></div>
+        <div className="flex items-center justify-between px-4 py-4"><Logo />
+          <form action={signOut} className="md:hidden"><button className="btn-ghost">Log out</button></form></div>
         <nav className="flex gap-1 overflow-x-auto px-2 pb-3 md:flex-col md:pb-0" aria-label="Main">
           {NAV.map(([href, label]) => (
             <Link key={href} href={href} className="whitespace-nowrap rounded-lg px-3 py-2 text-sm text-mute hover:bg-panel hover:text-ink">{label}</Link>
