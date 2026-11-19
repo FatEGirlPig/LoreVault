@@ -75,7 +75,7 @@ export async function updateProfile(_: FormState, f: FormData): Promise<FormStat
     username, display_name: str(f, "display_name").slice(0, 50) || null, bio: str(f, "bio").slice(0, 500) || null,
     visibility: v.success ? v.data : "private", updated_at: new Date().toISOString(),
   }).eq("id", user.id);
-  if (error) return { error: error.code === "23505" ? "That username is taken." : "Could not save profile." };
+  if (error) { console.error("profile save failed", error); return { error: error.code === "23505" ? "That username is taken." : "Could not save profile. Please try again." }; }
   await audit(user.id, "profile.updated", { visibility: v.success ? v.data : "private" });
   revalidatePath("/settings");
   return { message: "Profile saved." };

@@ -22,7 +22,12 @@ export async function GET(req: NextRequest) {
     user_id: user.id, platform: "steam", external_user_id: steamId, display_name: profile.displayName ?? null,
     status: "connected", granted_permissions: ["openid_identity"], available_data: ["identity"],
   }, { onConflict: "user_id,platform" }).select().single();
-  if (error) return back("error=This+Steam+account+is+already+linked+to+another+LoreVault+user");
+  if (error) {
+    console.error("steam connect failed", error);
+    return back(error.code === "23505"
+      ? "error=This+Steam+account+is+already+linked+to+another+LoreVault+user"
+      : "error=Could+not+save+the+Steam+connection.+Please+try+again");
+  }
   await audit(user.id, "connection.added", { platform: "steam" });
 
   let msg = "connected=steam";
