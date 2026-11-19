@@ -272,7 +272,7 @@ export async function addClip(_: FormState, f: FormData): Promise<FormState> {
   const v = vis.safeParse(f.get("visibility"));
   const { error } = await supabase.from("clips").insert({
     user_id: user.id, provider: parsed.provider, video_id: parsed.videoId, url: url.slice(0, 500),
-    title: str(f, "title").slice(0, 100) || null, game_id: str(f, "game_id") || null, visibility: v.success ? v.data : "friends",
+    title: str(f, "title").slice(0, 100) || null, game_id: str(f, "game_id") || null, visibility: v.success ? v.data : "public",
   });
   if (error) return { error: "Could not post clip." };
   revalidatePath("/clips");

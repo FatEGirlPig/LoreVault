@@ -40,7 +40,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
       </section>
 
       <section className="card"><h2 className="mb-1 font-display font-bold">Privacy</h2>
-        <p className="mb-4 text-sm text-mute">Everything starts private. Choose exactly what others can see.</p>
+        <p className="mb-4 text-sm text-mute">Your profile is public by default so friends can find you and you appear on leaderboards. Change anything here.</p>
         <ActionForm action={updatePrivacy} className="grid gap-4 sm:grid-cols-2">
           {PRIVACY.map(([k, l]) => <VisibilitySelect key={k} name={k} label={l} value={k === "profile" ? profile?.visibility ?? "private" : (privacy as Record<string, string> | null)?.[k] ?? "private"} />)}
           <p className="text-xs text-mute sm:col-span-2">To appear on the global leaderboard and get a shareable stats card, set both Profile page and Gaming library to Public.</p>

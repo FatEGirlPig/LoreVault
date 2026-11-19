@@ -5,7 +5,7 @@ const SECTIONS = [
   ["Library", ["Every Steam game imported automatically, with playtime", "Add PlayStation, Xbox, Nintendo and other games by hand or CSV", "Search, sort and filter; notes, ratings and play status", "Custom collections and wishlists"]],
   ["Achievements", ["Every Steam achievement across your library", "Completion bars and perfect-game tracking", "Unlock dates and global rarity — see your rarest wins", "Achievement stats on your public profile"]],
   ["Clips", ["Share clips from YouTube, Twitch or Streamable", "Tag the game and choose who can see it", "Friends and public feeds", "A shareable link for every clip"]],
-  ["Friends & privacy", ["Friend requests, blocking and reporting", "Everything private by default", "Choose exactly what your profile shows", "Export or delete your data anytime"]],
+  ["Friends & privacy", ["Friend requests, blocking and reporting", "Public profile by default — change anything, anytime", "Choose exactly what your profile shows", "Export or delete your data anytime"]],
 ] as const;
 
 export default function Features() {

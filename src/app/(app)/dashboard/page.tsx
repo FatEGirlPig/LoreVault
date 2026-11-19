@@ -31,7 +31,7 @@ export default async function Dashboard() {
       <h1 className="h1">Welcome back{profile?.username ? `, ${profile.username}` : ""}</h1>
       {!profile?.username && (
         <div className="card border-violet"><p className="font-semibold">Pick a username to finish setting up</p>
-          <p className="mt-1 text-sm text-mute">Your profile stays private until you choose otherwise.</p>
+          <p className="mt-1 text-sm text-mute">Your username is how friends find you and how you appear on leaderboards.</p>
           <Link href="/settings" className="btn-primary mt-3">Set username</Link></div>
       )}
       {!accounts?.length && (

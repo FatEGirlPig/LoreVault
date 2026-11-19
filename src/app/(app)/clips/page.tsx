@@ -30,7 +30,7 @@ export default async function Clips({ searchParams }: { searchParams: Promise<Re
           <input name="title" maxLength={100} placeholder="Title (e.g. Clutch 1v4)" className="input sm:col-span-2" aria-label="Title" />
           <select name="game_id" className="input" aria-label="Game"><option value="">No game tagged</option>
             {gameList.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}</select>
-          <select name="visibility" defaultValue="friends" className="input" aria-label="Who can see it">
+          <select name="visibility" defaultValue="public" className="input" aria-label="Who can see it">
             <option value="private">Only me</option><option value="friends">Friends</option><option value="public">Public</option></select>
           <Submit className="btn-primary sm:col-span-2">Post clip</Submit>
         </ActionForm>

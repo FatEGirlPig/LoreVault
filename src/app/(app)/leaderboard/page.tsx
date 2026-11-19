@@ -52,7 +52,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
             </li>))}
         </ol>
       ) : scope === "global" ? <Empty title="No public players yet">Players appear here once they set their profile and library to Public.</Empty>
-      : <Empty title="It's lonely at the top"><Link href="/friends" className="text-cyan">Add friends</Link> to compete. Friends appear here when they share their library with friends (Settings → Privacy).</Empty>}
+      : <Empty title="It's lonely at the top"><Link href="/friends" className="text-cyan">Add friends</Link> to compete. Friends who made their library private won&apos;t appear.</Empty>}
     </div>
   );
 }

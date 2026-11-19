@@ -5,7 +5,7 @@ const FEATURES = [
   ["🎮", "Your whole library", "Sign in with Steam and every game you own appears instantly — with playtime. Add console games by hand."],
   ["🏆", "A real trophy room", "Every achievement across every game: completion bars, perfect games, unlock dates and how rare each one is."],
   ["🎬", "Share your best plays", "Post clips from YouTube, Twitch or Streamable. Show friends, or the whole world."],
-  ["👥", "Game with friends", "Add friends, see their clips and compare achievements. Your profile stays private until you say so."],
+  ["👥", "Game with friends", "Add friends, see their clips and compare achievements. You choose what your profile shows."],
 ];
 
 export default async function Home() {
