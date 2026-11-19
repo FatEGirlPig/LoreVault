@@ -35,7 +35,7 @@ export async function verifySteamAssertion(params: URLSearchParams, expectedRetu
   return parseSteamId(params.get("openid.claimed_id"));
 }
 
-const key = () => process.env.STEAM_WEB_API_KEY!;
+const key = () => encodeURIComponent((process.env.STEAM_WEB_API_KEY ?? "").trim());
 
 export function mapOwnedGames(json: unknown): ImportedGame[] {
   const games = (json as { response?: { games?: { appid: number; name?: string; playtime_forever?: number }[] } })
@@ -62,6 +62,7 @@ export const steam: Connector = {
   async fetchLibrary(steamId) {
     const r = await fetch(`${API}/IPlayerService/GetOwnedGames/v1/?key=${key()}&steamid=${steamId}&include_appinfo=1&include_played_free_games=1`);
     if (r.status === 429) throw new Error("Steam rate limit reached. Try again shortly.");
+    if (r.status === 401 || r.status === 403) throw new Error("Steam rejected the site's API key. The site owner needs to check STEAM_WEB_API_KEY.");
     if (!r.ok) throw new Error(`Steam API error (${r.status}).`);
     const json = await r.json();
     if (!json?.response?.games)
