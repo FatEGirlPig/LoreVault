@@ -16,11 +16,11 @@
 html { color-scheme: dark; }
 body { background: radial-gradient(1200px 600px at 80% -10%, #1b1450 0%, transparent 60%), var(--color-void); color: var(--color-ink); min-height: 100dvh; }
 
-@utility card { @apply rounded-2xl border border-line bg-panel/80 p-5 backdrop-blur; }
-@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50; }
-@utility btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50 bg-gradient-to-r from-violet to-cyan text-void hover:brightness-110; }
-@utility btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50 border border-line text-ink hover:border-violet; }
-@utility btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50 border border-red-500/40 text-red-300 hover:bg-red-500/10; }
+@utility card { @apply rounded-2xl border border-line bg-panel/80 p-5 backdrop-blur isolate; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50; }
+@utility btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50 bg-gradient-to-r from-violet to-cyan text-void hover:shadow-[0_0_18px_-4px_var(--color-violet)]; }
+@utility btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50 border border-line text-ink hover:border-violet; }
+@utility btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50 border border-red-500/40 text-red-300 hover:bg-red-500/10; }
 @utility input { @apply w-full rounded-xl border border-line bg-navy px-3 py-2 text-sm text-ink placeholder:text-mute focus:border-cyan focus:outline-none; }
 @utility label { @apply mb-1 block text-xs font-medium uppercase tracking-wider text-mute; }
 @utility h1 { @apply font-display text-2xl font-bold tracking-wide sm:text-3xl; }
@@ -36,3 +36,10 @@ body { background: radial-gradient(1200px 600px at 80% -10%, #1b1450 0%, transpa
 @keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .skeleton { border-radius: 1rem; background: linear-gradient(90deg, var(--color-panel) 25%, #18203f 50%, var(--color-panel) 75%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
+
+/* Keep rounded corners intact on hover/transition: clip composited layers to the radius, no square tap flash. */
+html { -webkit-tap-highlight-color: transparent; }
+.btn, .btn-primary, .btn-ghost, .btn-danger { isolation: isolate; overflow: hidden; background-clip: padding-box; }
+.btn-primary { position: relative; }
+.btn-primary::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: #fff; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.btn-primary:hover::after { opacity: .12; }
