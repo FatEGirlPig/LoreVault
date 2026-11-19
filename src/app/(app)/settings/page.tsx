@@ -1,16 +1,17 @@
 import { requireUser } from "@/lib/supabase/server";
 import { deleteAccount, updatePassword, updatePrivacy, updateProfile } from "@/app/actions";
 import { ActionForm, Submit } from "@/components/forms";
-import { VisibilitySelect } from "@/components/ui";
+import { Notice, VisibilitySelect } from "@/components/ui";
 import { SoundSettings } from "@/components/sound";
 export const metadata = { title: "Settings" };
 
 const PRIVACY: [string, string][] = [
-  ["library", "Gaming library"], ["connected_accounts", "Connected accounts"], ["media_default", "New clips (default)"],
+  ["profile", "Profile page"], ["library", "Gaming library"], ["connected_accounts", "Connected accounts"], ["media_default", "New clips (default)"],
   ["notes", "Game notes"], ["collections_default", "New collections (default)"], ["friends_list", "Friends list"], ["activity", "Activity"],
 ];
 
-export default async function Settings() {
+export default async function Settings({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  const sp = await searchParams;
   const { supabase, user } = await requireUser();
   const [{ data: profile }, { data: privacy }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
@@ -20,12 +21,12 @@ export default async function Settings() {
   return (
     <div className="max-w-3xl space-y-6">
       <h1 className="h1">Settings</h1>
+      <Notice params={sp} />
       <section className="card"><h2 className="mb-4 font-display font-bold">Profile</h2>
         <ActionForm action={updateProfile} className="grid gap-4 sm:grid-cols-2">
           <label><span className="label">Username</span><input name="username" required pattern="[a-z0-9_]{3,24}" defaultValue={profile?.username ?? ""} className="input" /></label>
           <label><span className="label">Display name</span><input name="display_name" maxLength={50} defaultValue={profile?.display_name ?? ""} className="input" /></label>
           <label className="sm:col-span-2"><span className="label">Bio</span><textarea name="bio" maxLength={500} rows={3} defaultValue={profile?.bio ?? ""} className="input" /></label>
-          <VisibilitySelect name="visibility" value={profile?.visibility ?? "private"} label="Who can see your profile" />
           <div className="flex items-end"><Submit>Save profile</Submit></div>
         </ActionForm>
         {profile?.username && profile.visibility !== "private" && <p className="mt-3 text-xs text-mute">Your profile: /profile/{profile.username}</p>}
@@ -41,7 +42,8 @@ export default async function Settings() {
       <section className="card"><h2 className="mb-1 font-display font-bold">Privacy</h2>
         <p className="mb-4 text-sm text-mute">Everything starts private. Choose exactly what others can see.</p>
         <ActionForm action={updatePrivacy} className="grid gap-4 sm:grid-cols-2">
-          {PRIVACY.map(([k, l]) => <VisibilitySelect key={k} name={k} label={l} value={(privacy as Record<string, string> | null)?.[k] ?? "private"} />)}
+          {PRIVACY.map(([k, l]) => <VisibilitySelect key={k} name={k} label={l} value={k === "profile" ? profile?.visibility ?? "private" : (privacy as Record<string, string> | null)?.[k] ?? "private"} />)}
+          <p className="text-xs text-mute sm:col-span-2">To appear on the global leaderboard and get a shareable stats card, set both Profile page and Gaming library to Public.</p>
           <div className="flex items-end"><Submit>Save privacy</Submit></div>
         </ActionForm></section>
 

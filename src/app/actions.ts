@@ -69,13 +69,12 @@ export async function updateProfile(_: FormState, f: FormData): Promise<FormStat
   const { supabase, user } = await requireUser();
   const username = str(f, "username").toLowerCase();
   if (!/^[a-z0-9_]{3,24}$/.test(username)) return { error: "Username: 3–24 lowercase letters, numbers or underscores." };
-  const v = vis.safeParse(f.get("visibility"));
   const { error } = await supabase.from("profiles").update({
     username, display_name: str(f, "display_name").slice(0, 50) || null, bio: str(f, "bio").slice(0, 500) || null,
-    visibility: v.success ? v.data : "private", updated_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   }).eq("id", user.id);
   if (error) { console.error("profile save failed", error); return { error: error.code === "23505" ? "That username is taken." : "Could not save profile. Please try again." }; }
-  await audit(user.id, "profile.updated", { visibility: v.success ? v.data : "private" });
+  await audit(user.id, "profile.updated");
   revalidatePath("/settings");
   return { message: "Profile saved." };
 }
@@ -86,6 +85,8 @@ export async function updatePrivacy(_: FormState, f: FormData): Promise<FormStat
   const patch: Record<string, string> = {};
   for (const k of keys) { const v = vis.safeParse(f.get(k)); if (v.success) patch[k] = v.data; }
   await supabase.from("privacy_settings").update({ ...patch, updated_at: new Date().toISOString() }).eq("user_id", user.id);
+  const pv = vis.safeParse(f.get("profile"));
+  if (pv.success) await supabase.from("profiles").update({ visibility: pv.data, updated_at: new Date().toISOString() }).eq("id", user.id);
   await audit(user.id, "privacy.updated", patch);
   revalidatePath("/settings");
   return { message: "Privacy settings saved." };
@@ -99,6 +100,17 @@ export async function deleteAccount(_: FormState, f: FormData): Promise<FormStat
   await db.auth.admin.deleteUser(user.id);
   await (await createClient()).auth.signOut();
   redirect("/?deleted=1");
+}
+
+export async function joinGlobalLeaderboard() {
+  const { supabase, user } = await requireUser();
+  const { data: p } = await supabase.from("profiles").select("username").eq("id", user.id).single();
+  if (!p?.username) redirect("/settings?error=Pick+a+username+first+to+join+the+leaderboard");
+  await supabase.from("profiles").update({ visibility: "public" }).eq("id", user.id);
+  await supabase.from("privacy_settings").update({ library: "public" }).eq("user_id", user.id);
+  await audit(user.id, "privacy.joined_global_leaderboard");
+  revalidatePath("/leaderboard");
+  redirect("/leaderboard?scope=global");
 }
 
 // ---------- Library ----------

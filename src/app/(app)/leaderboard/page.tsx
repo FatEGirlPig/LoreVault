@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
 import { Empty } from "@/components/ui";
+import { joinGlobalLeaderboard } from "@/app/actions";
+import { Submit } from "@/components/forms";
 export const metadata = { title: "Leaderboard" };
 
 type Row = { user_id: string; username: string | null; display_name: string | null; achievements: number; perfect: number; minutes: number; games: number };
@@ -34,7 +36,9 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
       </nav>
       {scope === "global" && (myRank >= 0
         ? <p className="text-sm text-mute">You&apos;re ranked <b className="text-cyan">#{myRank + 1}</b> of {rows.length} players.</p>
-        : <p className="text-sm text-mute">You&apos;re not on the global board. Set your Profile and Library to Public in <Link href="/settings" className="text-cyan">Settings</Link> to join.</p>)}
+        : <form action={joinGlobalLeaderboard} className="card flex flex-wrap items-center justify-between gap-3 border-cyan/50">
+            <p className="text-sm">You&apos;re not on the global board yet. Joining makes your profile and game library public.</p>
+            <Submit>Join the global leaderboard</Submit></form>)}
       {(scope === "global" ? rows.length > 0 : rows.length > 1) ? (
         <ol className="card divide-y divide-line p-0">
           {shown.map((r, i) => (
