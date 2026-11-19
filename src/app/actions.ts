@@ -28,8 +28,13 @@ export async function signUp(_: FormState, f: FormData): Promise<FormState> {
   if (!z.email().safeParse(email).success) return { error: "Enter a valid email." };
   if (password.length < 10) return { error: "Password must be at least 10 characters." };
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${site()}/auth/callback?next=/settings` } });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${site()}/auth/callback?next=/settings` } });
+  if (error) {
+    if (/rate limit/i.test(error.message)) return { error: "We're getting a lot of sign-ups right now. Please try again in a little while." };
+    return { error: /already|registered/i.test(error.message) ? "That email already has an account. Try logging in." : error.message };
+  }
+  if (data.user && !data.user.identities?.length) return { error: "That email already has an account. Try logging in." };
+  if (data.session) redirect("/settings?message=Welcome+to+LoreVault!+Pick+a+username+to+get+started.");
   return { message: "Check your email to verify your account." };
 }
 
