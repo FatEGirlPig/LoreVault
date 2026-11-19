@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
-import { removeUserGame, toggleCollectionGame, updateUserGame } from "@/app/actions";
+import { refreshAchievements, removeUserGame, toggleCollectionGame, updateUserGame } from "@/app/actions";
+import { getAchievements } from "@/lib/integrations/achievements";
+import { Achievements } from "@/components/achievements";
 import { ActionForm, ConfirmButton, Submit } from "@/components/forms";
 import { PLATFORM_LABEL, SOURCE_LABEL } from "@/components/ui";
 
@@ -16,6 +18,7 @@ export default async function GameDetail({ params }: { params: Promise<{ id: str
     supabase.from("media_files").select("id, filename").eq("owner_id", user.id).eq("game_id", game.id),
   ]);
   const synced = ug.source !== "manual";
+  const ach = ug.platform === "steam" && ug.connected_account_id ? await getAchievements(user.id, ug.id) : null;
 
   return (
     <div className="space-y-6">
@@ -24,6 +27,20 @@ export default async function GameDetail({ params }: { params: Promise<{ id: str
         <div className="mt-2 flex flex-wrap gap-2">{(sources ?? []).map((s, i) => (
           <span key={i} className="badge">{PLATFORM_LABEL[s.platform] ?? s.platform} · {SOURCE_LABEL[s.source]}
             {s.last_synced_at ? ` · ${new Date(s.last_synced_at).toLocaleDateString()}` : ""}</span>))}</div></div>
+
+      {ach && (ach.total > 0 || ach.error) && (
+        <section className="card">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display font-bold">Achievements {ach.total > 0 && <span className="text-mute">· {ach.unlocked}/{ach.total}</span>}</h2>
+            <form action={refreshAchievements}><input type="hidden" name="id" value={ug.id} />
+              <Submit className="btn-ghost text-xs">Refresh</Submit></form>
+          </div>
+          {ach.error && <p role="alert" className="mb-3 text-sm text-amber-300">{ach.error}</p>}
+          {ach.total > 0 && <Achievements items={ach.items} />}
+          {ach.fetchedAt && <p className="mt-3 text-xs text-mute">Updated {new Date(ach.fetchedAt).toLocaleString()} · from Steam</p>}
+        </section>
+      )}
+      {ach && ach.total === 0 && !ach.error && <p className="text-sm text-mute">This game has no Steam achievements.</p>}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card lg:col-span-2"><h2 className="mb-3 font-display font-bold">Tracking</h2>

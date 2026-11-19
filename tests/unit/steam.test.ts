@@ -34,3 +34,19 @@ describe("steam", () => {
     expect(g[1].playtimeMinutes).toBeUndefined();
   });
 });
+
+import { mergeAchievements } from "@/lib/integrations/steam";
+describe("mergeAchievements", () => {
+  const schema = { game: { availableGameStats: { achievements: [
+    { name: "A1", displayName: "First", description: "Do it", icon: "i1", icongray: "g1", hidden: 0 },
+    { name: "A2", displayName: "Secret", description: "Shh", icon: "i2", icongray: "g2", hidden: 1 },
+  ] } } };
+  const player = { playerstats: { success: true, achievements: [{ apiname: "A1", achieved: 1, unlocktime: 1700000000 }, { apiname: "A2", achieved: 0, unlocktime: 0 }] } };
+  const global = { achievementpercentages: { achievements: [{ name: "A1", percent: "54.32" }, { name: "A2", percent: 3.1 }] } };
+  it("merges schema, progress and rarity", () => {
+    const r = mergeAchievements(schema, player, global);
+    expect(r[0]).toMatchObject({ id: "A1", name: "First", unlocked: true, unlockedAt: 1700000000, globalPercent: 54.3 });
+    expect(r[1]).toMatchObject({ hidden: true, unlocked: false, unlockedAt: null, globalPercent: 3.1 });
+  });
+  it("handles games without achievements", () => expect(mergeAchievements({ game: {} }, null, null)).toEqual([]));
+});

@@ -17,7 +17,7 @@ export default async function Connections({ searchParams }: { searchParams: Prom
   return (
     <div className="space-y-6">
       <h1 className="h1">Connections</h1>
-      <p className="text-sm text-mute">LoreVault uses official sign-in only and never asks for your platform passwords. We only show data each platform actually shares.</p>
+      <p className="text-sm text-mute">Link your Steam account with Steam&apos;s official sign-in to import your games, playtime and achievements. We never see your Steam password. Games from other platforms can be added from your Library.</p>
       <Notice params={{ ...sp, message }} />
       <div className="grid gap-4 md:grid-cols-2">
         {CONNECTORS.map((c) => {

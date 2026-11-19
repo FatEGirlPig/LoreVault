@@ -52,7 +52,7 @@ export const steam: Connector = {
   platform: "steam",
   name: "Steam",
   status: "available",
-  dataTypes: ["identity", "library", "playtime"],
+  dataTypes: ["identity", "library", "playtime", "achievements"],
   caveat: "Owned games are only visible when your Steam profile's game details are public.",
   async getAccountProfile(steamId) {
     const r = await fetch(`${API}/ISteamUser/GetPlayerSummaries/v2/?key=${key()}&steamids=${steamId}`);
@@ -70,3 +70,42 @@ export const steam: Connector = {
     return { games: mapOwnedGames(json), dataTypes: ["library", "playtime"] };
   },
 };
+
+export interface Achievement {
+  id: string; name: string; description: string; icon: string; iconGray: string;
+  hidden: boolean; unlocked: boolean; unlockedAt: number | null; globalPercent: number | null;
+}
+
+/** Merge schema, player progress and global rarity into one list. Pure for testing. */
+export function mergeAchievements(schema: unknown, player: unknown, global: unknown): Achievement[] {
+  type S = { name: string; displayName?: string; description?: string; icon?: string; icongray?: string; hidden?: number };
+  const defs = ((schema as { game?: { availableGameStats?: { achievements?: S[] } } })?.game?.availableGameStats?.achievements) ?? [];
+  const mine = new Map(((player as { playerstats?: { achievements?: { apiname: string; achieved: number; unlocktime: number }[] } })
+    ?.playerstats?.achievements ?? []).map((a) => [a.apiname, a]));
+  const pct = new Map(((global as { achievementpercentages?: { achievements?: { name: string; percent: number | string }[] } })
+    ?.achievementpercentages?.achievements ?? []).map((a) => [a.name, Number(a.percent)]));
+  return defs.map((d) => {
+    const m = mine.get(d.name);
+    return {
+      id: d.name, name: d.displayName || d.name, description: d.description ?? "", icon: d.icon ?? "", iconGray: d.icongray ?? d.icon ?? "",
+      hidden: d.hidden === 1, unlocked: m?.achieved === 1, unlockedAt: m?.achieved === 1 && m.unlocktime ? m.unlocktime : null,
+      globalPercent: pct.has(d.name) ? Math.round(pct.get(d.name)! * 10) / 10 : null,
+    };
+  });
+}
+
+/** Fetch a user's achievements for one Steam app. Returns [] for games without achievements. */
+export async function fetchSteamAchievements(steamId: string, appId: string): Promise<Achievement[]> {
+  const [schemaRes, playerRes, globalRes] = await Promise.all([
+    fetch(`${API}/ISteamUserStats/GetSchemaForGame/v2/?key=${key()}&appid=${appId}&l=english`),
+    fetch(`${API}/ISteamUserStats/GetPlayerAchievements/v1/?key=${key()}&steamid=${steamId}&appid=${appId}`),
+    fetch(`${API}/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?gameid=${appId}`),
+  ]);
+  if (schemaRes.status === 401 || schemaRes.status === 403) throw new Error("Steam rejected the site's API key.");
+  const schema = schemaRes.ok ? await schemaRes.json() : null;
+  const player = await playerRes.json().catch(() => null);
+  if (playerRes.status === 403 || player?.playerstats?.error?.includes?.("private"))
+    throw new Error("Your Steam game details are private. Set Game details to Public in Steam's privacy settings to show achievements.");
+  const global = globalRes.ok ? await globalRes.json() : null;
+  return mergeAchievements(schema, player, global);
+}

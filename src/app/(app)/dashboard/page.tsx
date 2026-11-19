@@ -46,7 +46,7 @@ export default async function Dashboard() {
             <li key={a.platform} className="flex justify-between px-5 py-3 text-sm"><span>{PLATFORM_LABEL[a.platform]}</span>
               <span className={a.status === "error" ? "text-red-300" : "text-mute"}>
                 {a.status === "error" ? "Sync error" : a.last_synced_at ? `Synced ${new Date(a.last_synced_at).toLocaleString()}` : "Not yet synced"}</span></li>))}</ul>
-            : <Empty title="No platforms connected">Steam is available now. Other platforms are planned.</Empty>}
+            : <Empty title="Steam not connected"><Link href="/connections" className="text-cyan">Connect Steam</Link> to import your games and achievements.</Empty>}
         </section>
       </div>
     </div>

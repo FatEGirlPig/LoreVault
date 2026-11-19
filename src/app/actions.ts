@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { adminClient, audit, createClient, requireUser } from "@/lib/supabase/server";
 import { syncAccount } from "@/lib/integrations/sync";
+import { getAchievements } from "@/lib/integrations/achievements";
 import { deleteObject } from "@/lib/storage/r2";
 import { capacityOf } from "@/lib/storage/quota";
 import { addonPrice, planPrice, stripe } from "@/lib/billing/stripe";
@@ -164,6 +165,13 @@ export async function removeUserGame(f: FormData) {
   const { supabase, user } = await requireUser();
   await supabase.from("user_games").delete().eq("id", str(f, "id")).eq("user_id", user.id);
   redirect("/library");
+}
+
+export async function refreshAchievements(f: FormData) {
+  const { user } = await requireUser();
+  if (!rateLimit(`ach:${user.id}`, 20, 600_000)) return;
+  await getAchievements(user.id, str(f, "id"), { force: true });
+  revalidatePath(`/library/${str(f, "id")}`);
 }
 
 // ---------- Collections ----------

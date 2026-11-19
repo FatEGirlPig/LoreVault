@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const FEATURES = [
-  ["Unified library", "Every game you own across Steam and other platforms, in one searchable collection."],
+  ["Unified library", "Your Steam library plus games from any other platform, in one searchable collection."],
   ["Personal Vault", "10 GB of private storage for screenshots, clips, notes and guides — free."],
   ["Private by default", "Nothing is shared until you choose. Control visibility per profile, collection and file."],
-  ["Honest sync", "See exactly what each platform shares, when it last synced, and what to add manually."],
+  ["Steam sync", "Sign in with Steam to import your games, playtime and every achievement."],
 ];
 
 export default function Home() {

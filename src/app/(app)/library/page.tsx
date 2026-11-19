@@ -15,7 +15,7 @@ export default async function Library({ searchParams }: { searchParams: Promise<
   const sp = await searchParams;
   const { supabase, user } = await requireUser();
   let q = supabase.from("user_games")
-    .select("id, platform, source, status, playtime_minutes, games!inner(title, cover_url)")
+    .select("id, platform, source, status, playtime_minutes, games!inner(title, cover_url), user_achievements(unlocked, total)")
     .eq("user_id", user.id);
   if (sp.q) q = q.ilike("games.title", `%${sp.q.replace(/[%_]/g, "")}%`);
   if (sp.platform) q = q.eq("platform", sp.platform);
@@ -54,7 +54,9 @@ export default async function Library({ searchParams }: { searchParams: Promise<
               <div className="p-3"><p className="truncate font-semibold">{g.game.title}</p>
                 <div className="mt-1 flex flex-wrap gap-1"><span className="badge">{PLATFORM_LABEL[g.platform] ?? g.platform}</span>
                   <span className="badge">{SOURCE_LABEL[g.source]}</span>
-                  {g.playtime_minutes ? <span className="badge">{Math.round(g.playtime_minutes / 60)}h</span> : null}</div></div>
+                  {g.playtime_minutes ? <span className="badge">{Math.round(g.playtime_minutes / 60)}h</span> : null}
+                  {(() => { const a = g.user_achievements as unknown as { unlocked: number; total: number } | null;
+                    return a && a.total > 0 ? <span className={`badge ${a.unlocked === a.total ? "border-cyan text-cyan" : ""}`}>🏆 {a.unlocked}/{a.total}</span> : null; })()}</div></div>
             </Link></li>
           ))}
         </ul>
