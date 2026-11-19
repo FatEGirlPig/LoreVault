@@ -8,7 +8,7 @@ export type Trending = SrGame & { runs: number };
 
 async function get<T>(path: string, revalidate = 3600): Promise<T | null> {
   try {
-    const r = await fetch(`${API}${path}`, { next: { revalidate }, headers: { "User-Agent": "LoreVault/1.0" }, signal: AbortSignal.timeout(8000) });
+    const r = await fetch(`${API}${path}`, { next: { revalidate }, headers: { "User-Agent": "Vaultheim/1.0" }, signal: AbortSignal.timeout(8000) });
     return r.ok ? ((await r.json()) as { data: T }).data : null;
   } catch { return null; }
 }

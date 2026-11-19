@@ -9,6 +9,6 @@ export async function GET() {
   const out: Record<string, unknown> = { exported_at: new Date().toISOString(), email: user.email };
   for (const t of tables) out[t] = (await supabase.from(t).select("*").eq(col[t] ?? "user_id", user.id)).data;
   return new NextResponse(JSON.stringify(out, null, 2), {
-    headers: { "Content-Type": "application/json", "Content-Disposition": 'attachment; filename="lorevault-export.json"' },
+    headers: { "Content-Type": "application/json", "Content-Disposition": 'attachment; filename="vaultheim-export.json"' },
   });
 }

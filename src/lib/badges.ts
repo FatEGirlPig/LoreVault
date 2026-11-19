@@ -1,7 +1,7 @@
 export type Stats = { achievements: number; perfect: number; games: number; minutes: number; rarest: number | null; friends: number; clips: number };
 export type Badge = { id: string; icon: string; name: string; desc: string; earned: boolean; progress?: string };
 
-/** LoreVault badges, computed from stats (no storage needed). */
+/** Vaultheim badges, computed from stats (no storage needed). */
 export function computeBadges(s: Stats): Badge[] {
   const tier = (id: string, icon: string, name: string, desc: string, have: number, need: number): Badge =>
     ({ id, icon, name, desc, earned: have >= need, progress: have >= need ? undefined : `${Math.min(have, need).toLocaleString()}/${need.toLocaleString()}` });

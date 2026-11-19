@@ -6,7 +6,7 @@ export const metadata = { title: "Create account" };
 export default function Signup() {
   return (
     <>
-      <h1 className="mb-2 font-display text-xl font-bold">Join LoreVault</h1>
+      <h1 className="mb-2 font-display text-xl font-bold">Join Vaultheim</h1>
       <p className="mb-6 text-sm text-mute">Free forever. Your Steam library and achievements in one place.</p>
       <ActionForm action={signUp}>
         <label className="block"><span className="label">Email</span><input name="email" type="email" required autoComplete="email" className="input" /></label>

@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   if (error) {
     console.error("steam connect failed", error);
     return back(error.code === "23505"
-      ? "error=This+Steam+account+is+already+linked+to+another+LoreVault+user"
+      ? "error=This+Steam+account+is+already+linked+to+another+Vaultheim+user"
       : "error=Could+not+save+the+Steam+connection.+Please+try+again");
   }
   await audit(user.id, "connection.added", { platform: "steam" });

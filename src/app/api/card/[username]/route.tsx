@@ -27,7 +27,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ usernam
             <div style={{ fontSize: 60, fontWeight: 800 }}>{p.display_name || p.username}</div>
             <div style={{ fontSize: 28, color: "#8d95b5" }}>@{p.username}</div>
           </div>
-          <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: 6, display: "flex" }}>LORE<span style={{ color: "#22d3ee" }}>VAULT</span></div>
+          <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: 6, display: "flex" }}>VAULT<span style={{ color: "#22d3ee" }}>HEIM</span></div>
         </div>
         <div style={{ display: "flex", gap: 20, marginTop: 48 }}>
           {tiles.map(([l, v]) => (

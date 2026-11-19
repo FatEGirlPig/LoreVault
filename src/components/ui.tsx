@@ -4,8 +4,8 @@ export function Logo({ className = "" }: { className?: string }) {
   return (
     <Link href="/" className={`flex items-center gap-2 font-display text-lg font-bold tracking-widest ${className}`}>
       <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden><defs><linearGradient id="lg" x1="0" x2="1"><stop stopColor="#8b5cf6" /><stop offset="1" stopColor="#22d3ee" /></linearGradient></defs>
-        <path d="M16 2 29 9v14L16 30 3 23V9z" fill="none" stroke="url(#lg)" strokeWidth="2.5" /><path d="M11 10v12h10" fill="none" stroke="url(#lg)" strokeWidth="2.5" /></svg>
-      LORE<span className="glow-text">VAULT</span>
+        <path d="M16 2 29 9v14L16 30 3 23V9z" fill="none" stroke="url(#lg)" strokeWidth="2.5" /><path d="M10 10l6 12 6-12" fill="none" stroke="url(#lg)" strokeWidth="2.5" strokeLinejoin="round" /></svg>
+      VAULT<span className="glow-text">HEIM</span>
     </Link>
   );
 }

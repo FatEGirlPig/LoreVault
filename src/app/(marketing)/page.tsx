@@ -21,7 +21,7 @@ export default async function Home() {
           Bring your Steam library, every achievement and your best clips together — and show them off to your friends.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          {user ? <Link href="/dashboard" className="btn-primary px-6 py-3 text-base">Welcome back — enter LoreVault →</Link>
+          {user ? <Link href="/dashboard" className="btn-primary px-6 py-3 text-base">Welcome back — enter Vaultheim →</Link>
             : <Link href="/signup" className="btn-primary px-6 py-3 text-base">Get started — it&apos;s free</Link>}
           <Link href="/leaderboard?scope=global" className="btn-ghost px-6 py-3 text-base">Explore without an account</Link>
         </div>

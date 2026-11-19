@@ -14,5 +14,5 @@ describe("parseClipUrl", () => {
     for (const u of ["https://evil.com/watch?v=dQw4w9WgXcQ", "javascript:alert(1)", "not a url", "https://youtube.com/watch?v=short"])
       expect(parseClipUrl(u)).toBeNull();
   });
-  it("builds Twitch embeds with the parent host", () => expect(embedUrl("twitch", "Abc", "lorevault.net")).toContain("parent=lorevault.net"));
+  it("builds Twitch embeds with the parent host", () => expect(embedUrl("twitch", "Abc", "vaultheim.gg")).toContain("parent=vaultheim.gg"));
 });

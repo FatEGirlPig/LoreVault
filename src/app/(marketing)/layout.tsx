@@ -14,7 +14,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
           <Link href="/leaderboard?scope=global" className="px-2 py-2 text-mute hover:text-ink">Explore</Link>
           {user ? <>
             <form action={signOut}><button className="px-2 py-2 text-mute hover:text-ink">Log out</button></form>
-            <Link href="/dashboard" className="btn-primary">Enter LoreVault →</Link>
+            <Link href="/dashboard" className="btn-primary">Enter Vaultheim →</Link>
           </> : <>
             <Link href="/login" className="btn-ghost">Log in</Link>
             <Link href="/signup" className="btn-primary">Sign up free</Link>
@@ -24,7 +24,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
       <main className="page-enter flex-1">{children}</main>
       <footer className="mx-auto w-full max-w-6xl border-t border-line px-4 py-8 text-xs text-mute">
         <div className="flex flex-wrap justify-between gap-4">
-          <span>© {new Date().getFullYear()} LoreVault. Not affiliated with Valve or Steam.</span>
+          <span>© {new Date().getFullYear()} Vaultheim. Not affiliated with Valve or Steam.</span>
           <span className="flex gap-4"><Link href="/features">Features</Link><Link href="/signup">Sign up</Link></span>
         </div>
       </footer>

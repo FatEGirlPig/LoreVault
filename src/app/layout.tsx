@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const orbitron = Orbitron({ subsets: ["latin"], variable: "--font-orbitron" });
 
 export const metadata: Metadata = {
-  title: { default: "LoreVault — Your entire gaming universe. One place.", template: "%s · LoreVault" },
+  title: { default: "Vaultheim — Your entire gaming universe. One place.", template: "%s · Vaultheim" },
   description: "A free gaming library and personal archive. Connect your platforms, organize every game, and preserve your gaming memories.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
 };

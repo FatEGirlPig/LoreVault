@@ -34,7 +34,7 @@ export async function signUp(_: FormState, f: FormData): Promise<FormState> {
     return { error: /already|registered/i.test(error.message) ? "That email already has an account. Try logging in." : error.message };
   }
   if (data.user && !data.user.identities?.length) return { error: "That email already has an account. Try logging in." };
-  if (data.session) redirect("/settings?message=Welcome+to+LoreVault!+Pick+a+username+to+get+started.");
+  if (data.session) redirect("/settings?message=Welcome+to+Vaultheim!+Pick+a+username+to+get+started.");
   return { message: "Check your email to verify your account." };
 }
 

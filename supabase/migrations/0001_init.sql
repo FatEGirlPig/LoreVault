@@ -1,4 +1,4 @@
--- LoreVault initial schema. Every user-owned table has RLS enabled.
+-- Vaultheim initial schema. Every user-owned table has RLS enabled.
 -- Tables that only the server may change (quotas, usage, subscriptions, secrets)
 -- have no user write policies; they are written with the service role.
 

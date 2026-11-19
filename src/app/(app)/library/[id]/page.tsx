@@ -75,7 +75,7 @@ export default async function GameDetail({ params }: { params: Promise<{ id: str
       {ach && ach.total === 0 && !ach.error && <p className="text-sm text-mute">This game has no Steam achievements.</p>}
 
       {ranks.length > 1 && <section className="card">
-        <h2 className="mb-3 font-display font-bold">LoreVault leaderboard <span className="text-sm font-normal text-mute">· {ranks.length} players own this</span></h2>
+        <h2 className="mb-3 font-display font-bold">Vaultheim leaderboard <span className="text-sm font-normal text-mute">· {ranks.length} players own this</span></h2>
         <ol className="divide-y divide-line">{ranks.slice(0, 10).map((r, i) => (
           <li key={r.user_id} className={`flex items-center gap-3 py-2 text-sm ${r.user_id === user.id ? "text-cyan" : ""}`}>
             <span className="w-7 text-center font-display">{["🥇", "🥈", "🥉"][i] ?? i + 1}</span>

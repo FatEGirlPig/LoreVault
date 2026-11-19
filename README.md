@@ -1,4 +1,4 @@
-# LoreVault
+# Vaultheim
 
 *Your entire gaming universe. One place.* A free Steam library, achievement tracker and clip-sharing site.
 

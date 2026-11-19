@@ -12,7 +12,7 @@ export default function Features() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       <h1 className="h1">Everything you play, all in one place</h1>
-      <p className="mt-2 text-mute">LoreVault is completely free. No plans, no paywalls.</p>
+      <p className="mt-2 text-mute">Vaultheim is completely free. No plans, no paywalls.</p>
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         {SECTIONS.map(([t, items]) => (
           <div key={t} className="card"><h2 className="font-display font-bold text-cyan">{t}</h2>
